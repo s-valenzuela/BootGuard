@@ -57,3 +57,6 @@ package.json
 package-lock.json
 pnpm-lock.yaml
 pnpmfile.cjs
+
+### Claude Code ###
+.claude/

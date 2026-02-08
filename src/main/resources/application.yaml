@@ -1,5 +1,8 @@
 spring:
   application:
-    name: monitoring
+    name: bootguard
+  threads:
+    virtual:
+      enabled: true
 vaadin:
   launch-browser: true

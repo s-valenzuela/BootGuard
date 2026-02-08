@@ -5,59 +5,56 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.client.HealthEndpointResponse;
+import se.valenzuela.monitoring.client.InfoEndpointResponse;
 import se.valenzuela.monitoring.model.MonitoredService;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 @Slf4j
 @Service
 public class MonitoringService {
 
-    private final HashMap<String, MonitoredService> services = new HashMap<>();
-    private final List<Consumer<MonitoredService>> listeners = new ArrayList<>();
+    private final RestClient restClient;
+    private final ConcurrentHashMap<String, MonitoredService> services = new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<Consumer<MonitoredService>> listeners = new CopyOnWriteArrayList<>();
+
+    public MonitoringService(RestClient restClient) {
+        this.restClient = restClient;
+    }
 
     public boolean addService(String url) {
-        // fetch info from spring boot and populate version
-        boolean exists = services.containsKey(url);
-        if (exists) {
+        MonitoredService service = new MonitoredService(url);
+        if (services.putIfAbsent(url, service) != null) {
             return false;
         }
-
-        MonitoredService service = new MonitoredService(url, null, (String) null);
         refreshService(service);
-        services.put(url, service);
         listeners.forEach(listener -> listener.accept(service));
         return true;
     }
 
     private void refreshService(MonitoredService service) {
-        RestClient restClient = RestClient.builder()
-                .baseUrl(service.getUrl())
-                .build();
-
-        String rawInfoResponse;
-        HealthEndpointResponse healthResponse;
+        String baseUrl = service.getUrl();
         try {
-            rawInfoResponse = restClient.get()
-                    .uri(service.getInfoEndpoint())
+            InfoEndpointResponse info = restClient.get()
+                    .uri(baseUrl + service.getInfoEndpoint())
                     .retrieve()
-                    .body(String.class);
-            healthResponse = restClient.get()
-                    .uri(service.getHealthEndpoint())
+                    .body(InfoEndpointResponse.class);
+            HealthEndpointResponse health = restClient.get()
+                    .uri(baseUrl + service.getHealthEndpoint())
                     .retrieve()
                     .body(HealthEndpointResponse.class);
+            service.updateInfo(info);
+            service.updateHealth(health);
         } catch (Exception e) {
-            log.warn("Endpoint did not respond successfully for {}", service.getUrl(), e);
-            rawInfoResponse = "{}";
-            healthResponse = new HealthEndpointResponse("DOWN");
+            log.warn("Endpoint did not respond successfully for {}", baseUrl, e);
+            service.markDown();
         }
-
-        service.setHealthResponse(healthResponse);
-        service.setInfo(rawInfoResponse);
     }
 
     public void addListener(Consumer<MonitoredService> listener) {
@@ -70,14 +67,18 @@ public class MonitoringService {
 
     @Scheduled(cron = "*/30 * * * * *")
     public void refreshAll() {
-        for (MonitoredService service : services.values()) {
-            refreshService(service);
-            listeners.forEach(listener -> listener.accept(service));
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (MonitoredService service : services.values()) {
+                executor.submit(() -> {
+                    refreshService(service);
+                    listeners.forEach(listener -> listener.accept(service));
+                });
+            }
         }
     }
 
     public Collection<MonitoredService> getServices() {
-        return services.values();
+        return Collections.unmodifiableCollection(services.values());
     }
 
     public void removeService(MonitoredService service) {

@@ -11,7 +11,7 @@
 	<groupId>se.valenzuela</groupId>
 	<artifactId>monitoring</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>monitoring</name>
+	<name>BootGuard</name>
 	<description>One tool to rule them all</description>
 	<url/>
 	<licenses>

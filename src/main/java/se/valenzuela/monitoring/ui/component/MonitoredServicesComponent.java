@@ -19,6 +19,7 @@ import se.valenzuela.monitoring.service.MonitoringService;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.function.Consumer;
 
 @Getter
@@ -32,7 +33,7 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
     public MonitoredServicesComponent(MonitoringService monitoringService) {
         this.monitoringService = monitoringService;
 
-        dataProvider = new ListDataProvider<>(monitoringService.getServices());
+        dataProvider = new ListDataProvider<>(new ArrayList<>(monitoringService.getServices()));
 
         setDataProvider(dataProvider);
         addColumn(MonitoredService::getName).setSortable(true).setHeader("Service");
@@ -57,10 +58,7 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
                     .format(service.getLastUpdated().atZone(ZoneId.systemDefault()));
         }).setHeader("Last updated").setSortable(true);
         addColumn(new ComponentRenderer<>(service ->
-                new Button(VaadinIcon.TRASH.create(), _ -> {
-                    openDeleteDialog(service);
-                    monitoringService.removeService(service);
-                }))
+                new Button(VaadinIcon.TRASH.create(), _ -> openDeleteDialog(service)))
         ).setHeader("Actions");
         setPartNameGenerator(s -> !s.isInfoStatus() ? "unavailable" : null);
         setSizeFull();
@@ -69,7 +67,11 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         UI ui = UI.getCurrent();
         Consumer<MonitoredService> listener = _ -> {
             if (ui != null && ui.isAttached()) {
-                ui.access(dataProvider::refreshAll);
+                ui.access(() -> {
+                    dataProvider.getItems().clear();
+                    dataProvider.getItems().addAll(monitoringService.getServices());
+                    dataProvider.refreshAll();
+                });
             }
         };
         monitoringService.addListener(listener);
