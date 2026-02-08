@@ -1,0 +1,26 @@
+/* Add your styles here */
+
+/* Allow row background to show through cells */
+vaadin-grid::part(body-cell) {
+    background: transparent;
+}
+
+/* Alternating row colors (zebra striping) */
+vaadin-grid::part(even-row) {
+    background: var(--lumo-contrast-5pct);
+}
+
+/* Hover effect for entire row */
+vaadin-grid::part(even-row):hover,
+vaadin-grid::part(odd-row):hover {
+    background: var(--lumo-primary-color-10pct);
+}
+
+vaadin-grid::part(unavailable) {
+    background: linear-gradient(var(--lumo-error-color-10pct), var(--lumo-error-color-10pct)) var(--lumo-base-color);
+}
+
+/* Hover on unavailable rows */
+vaadin-grid::part(unavailable):hover {
+    background: linear-gradient(var(--lumo-error-color-10pct), var(--lumo-error-color-10pct)) var(--lumo-primary-color-10pct);
+}
