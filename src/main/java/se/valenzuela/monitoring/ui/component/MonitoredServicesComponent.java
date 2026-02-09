@@ -8,6 +8,7 @@ import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.provider.ListDataProvider;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
@@ -29,6 +30,7 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
 
     private final ListDataProvider<MonitoredService> dataProvider;
     private final MonitoringService monitoringService;
+    private Consumer<MonitoredService> editListener;
 
     public MonitoredServicesComponent(MonitoringService monitoringService) {
         this.monitoringService = monitoringService;
@@ -57,9 +59,18 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
                     .withLocale(UI.getCurrent().getLocale())
                     .format(service.getLastUpdated().atZone(ZoneId.systemDefault()));
         }).setHeader("Last updated").setSortable(true);
-        addColumn(new ComponentRenderer<>(service ->
-                new Button(VaadinIcon.TRASH.create(), _ -> openDeleteDialog(service)))
-        ).setHeader("Actions");
+        addColumn(new ComponentRenderer<>(service -> {
+            Button editButton = new Button(VaadinIcon.EDIT.create(), _ -> {
+                if (editListener != null) {
+                    editListener.accept(service);
+                }
+            });
+            Button deleteButton = new Button(VaadinIcon.TRASH.create(), _ -> openDeleteDialog(service));
+            HorizontalLayout actions = new HorizontalLayout(editButton, deleteButton);
+            actions.setSpacing(true);
+            actions.setPadding(false);
+            return actions;
+        })).setHeader("Actions");
         setPartNameGenerator(s -> !s.isInfoStatus() ? "unavailable" : null);
         setSizeFull();
         addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
@@ -77,6 +88,10 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         monitoringService.addListener(listener);
 
         addDetachListener(_ -> monitoringService.removeListener(listener));
+    }
+
+    public void setEditListener(Consumer<MonitoredService> editListener) {
+        this.editListener = editListener;
     }
 
     private void openDeleteDialog(MonitoredService service) {

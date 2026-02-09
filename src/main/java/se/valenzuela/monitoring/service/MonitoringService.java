@@ -81,6 +81,13 @@ public class MonitoringService {
         return Collections.unmodifiableCollection(services.values());
     }
 
+    public void updateServiceUrl(MonitoredService service, String newUrl) {
+        services.remove(service.getUrl());
+        service.setUrl(newUrl);
+        services.put(newUrl, service);
+        listeners.forEach(listener -> listener.accept(service));
+    }
+
     public void removeService(MonitoredService service) {
         services.remove(service.getUrl());
         listeners.forEach(listener -> listener.accept(service));

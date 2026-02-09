@@ -27,6 +27,7 @@ public class AddMonitoredServiceComponent extends Composite<HorizontalLayout> {
         this.monitoringService = monitoringService;
         Button addButton = new Button("+", _ -> addButtonClickListener());
 
+        getContent().setAlignItems(HorizontalLayout.Alignment.BASELINE);
         getContent().add(label, url, addButton);
 
         url.addValueChangeListener(_ -> url.setInvalid(false));
