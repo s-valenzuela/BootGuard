@@ -1,16 +1,14 @@
 package se.valenzuela.monitoring.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.client.InfoEndpointResponse;
 import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,40 +19,31 @@ import java.util.function.Consumer;
 public class MonitoringService {
 
     private final RestClient restClient;
-    private final ConcurrentHashMap<String, MonitoredService> services = new ConcurrentHashMap<>();
+    private final MonitoredServiceRepository repository;
     private final CopyOnWriteArrayList<Consumer<MonitoredService>> listeners = new CopyOnWriteArrayList<>();
 
-    public MonitoringService(RestClient restClient) {
+    public MonitoringService(RestClient restClient, MonitoredServiceRepository repository) {
         this.restClient = restClient;
+        this.repository = repository;
     }
 
     public boolean addService(String url) {
-        MonitoredService service = new MonitoredService(url);
-        if (services.putIfAbsent(url, service) != null) {
+        if (repository.existsByUrl(url)) {
             return false;
         }
-        refreshService(service);
-        listeners.forEach(listener -> listener.accept(service));
-        return true;
-    }
-
-    private void refreshService(MonitoredService service) {
-        String baseUrl = service.getUrl();
+        MonitoredService service = new MonitoredService(url);
         try {
             InfoEndpointResponse info = restClient.get()
-                    .uri(baseUrl + service.getInfoEndpoint())
+                    .uri(url + service.getInfoEndpoint())
                     .retrieve()
                     .body(InfoEndpointResponse.class);
-            HealthEndpointResponse health = restClient.get()
-                    .uri(baseUrl + service.getHealthEndpoint())
-                    .retrieve()
-                    .body(HealthEndpointResponse.class);
             service.updateInfo(info);
-            service.updateHealth(health);
         } catch (Exception e) {
-            log.warn("Endpoint did not respond successfully for {}", baseUrl, e);
-            service.markDown();
+            log.warn("Could not fetch info for {}", url, e);
         }
+        repository.save(service);
+        listeners.forEach(listener -> listener.accept(service));
+        return true;
     }
 
     public void addListener(Consumer<MonitoredService> listener) {
@@ -65,32 +54,52 @@ public class MonitoringService {
         listeners.remove(listener);
     }
 
-    @Scheduled(cron = "*/30 * * * * *")
-    public void refreshAll() {
+    public List<MonitoredService> getServices() {
+        List<MonitoredService> services = repository.findAll();
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            for (MonitoredService service : services.values()) {
-                executor.submit(() -> {
-                    refreshService(service);
-                    listeners.forEach(listener -> listener.accept(service));
-                });
+            for (MonitoredService service : services) {
+                executor.submit(() -> fetchStatus(service));
             }
+        }
+        return services;
+    }
+
+    private void fetchStatus(MonitoredService service) {
+        String baseUrl = service.getUrl();
+        try {
+            InfoEndpointResponse info = restClient.get()
+                    .uri(baseUrl + service.getInfoEndpoint())
+                    .retrieve()
+                    .body(InfoEndpointResponse.class);
+            service.setInfoStatus(true);
+            if (info != null) {
+                service.setName(info.name());
+                service.setVersion(info.version());
+            }
+        } catch (Exception e) {
+            service.setInfoStatus(false);
+        }
+        try {
+            HealthEndpointResponse health = restClient.get()
+                    .uri(baseUrl + service.getHealthEndpoint())
+                    .retrieve()
+                    .body(HealthEndpointResponse.class);
+            service.setHealthResponseStatus(health != null ? health.status() : null);
+            service.setHealthStatus(health != null && "UP".equalsIgnoreCase(health.status()));
+        } catch (Exception e) {
+            service.setHealthStatus(false);
+            service.setHealthResponseStatus("DOWN");
         }
     }
 
-    public Collection<MonitoredService> getServices() {
-        return Collections.unmodifiableCollection(services.values());
-    }
-
     public void updateServiceUrl(MonitoredService service, String newUrl) {
-        services.remove(service.getUrl());
         service.setUrl(newUrl);
-        services.put(newUrl, service);
+        repository.save(service);
         listeners.forEach(listener -> listener.accept(service));
     }
 
     public void removeService(MonitoredService service) {
-        services.remove(service.getUrl());
+        repository.delete(service);
         listeners.forEach(listener -> listener.accept(service));
     }
-
 }

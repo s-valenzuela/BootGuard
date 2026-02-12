@@ -78,9 +78,10 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         UI ui = UI.getCurrent();
         Consumer<MonitoredService> listener = _ -> {
             if (ui != null && ui.isAttached()) {
+                var services = monitoringService.getServices();
                 ui.access(() -> {
                     dataProvider.getItems().clear();
-                    dataProvider.getItems().addAll(monitoringService.getServices());
+                    dataProvider.getItems().addAll(services);
                     dataProvider.refreshAll();
                 });
             }

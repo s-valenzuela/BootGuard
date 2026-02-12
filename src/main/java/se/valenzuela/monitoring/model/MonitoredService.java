@@ -1,28 +1,49 @@
 package se.valenzuela.monitoring.model;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import se.valenzuela.monitoring.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.client.InfoEndpointResponse;
 
 import java.time.Instant;
 
 @Getter
 @Setter
+@Entity
+@Table(name = "monitored_service")
 public class MonitoredService {
 
     public static final String DEFAULT_INFO_ENDPOINT = "/actuator/info";
     public static final String DEFAULT_HEALTH_ENDPOINT = "/actuator/health";
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false, length = 2048)
     private String url;
+
     private String name;
     private String version;
-    private boolean infoStatus;
-    private boolean healthStatus;
-    private HealthEndpointResponse healthResponse;
     private Instant lastUpdated;
+
+    @Transient
+    private boolean infoStatus;
+
+    @Transient
+    private boolean healthStatus;
+
+    @Transient
+    private String healthResponseStatus;
+
+    @Column(nullable = false)
     private String infoEndpoint;
+
+    @Column(nullable = false)
     private String healthEndpoint;
+
+    protected MonitoredService() {
+    }
 
     public MonitoredService(String url) {
         this.url = url;
@@ -34,21 +55,6 @@ public class MonitoredService {
     public void updateInfo(InfoEndpointResponse info) {
         this.name = info.name();
         this.version = info.version();
-        this.infoStatus = true;
-        this.lastUpdated = Instant.now();
-    }
-
-    public void updateHealth(HealthEndpointResponse health) {
-        this.healthResponse = health;
-        this.healthStatus = health != null && health.status() != null
-                && health.status().equalsIgnoreCase("UP");
-        this.lastUpdated = Instant.now();
-    }
-
-    public void markDown() {
-        this.infoStatus = false;
-        this.healthStatus = false;
-        this.healthResponse = new HealthEndpointResponse("DOWN");
         this.lastUpdated = Instant.now();
     }
 }
