@@ -3,6 +3,7 @@ package se.valenzuela.monitoring.ui;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Span;
@@ -11,27 +12,34 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import se.valenzuela.monitoring.model.Environment;
 import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.service.EnvironmentService;
 import se.valenzuela.monitoring.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.MonitoredServicesComponent;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ServicesView extends HorizontalLayout {
 
     private final VerticalLayout detailPanel = new VerticalLayout();
     private final MonitoringService monitoringService;
+    private final EnvironmentService environmentService;
     private TextField urlField;
     private TextField infoEndpointField;
     private TextField healthEndpointField;
+    private CheckboxGroup<Environment> environmentCheckboxGroup;
     private Button saveButton;
 
-    public ServicesView(MonitoringService monitoringService) {
+    public ServicesView(MonitoringService monitoringService, EnvironmentService environmentService) {
         this.monitoringService = monitoringService;
+        this.environmentService = environmentService;
         setSizeFull();
 
-        MonitoredServicesComponent monitoredServicesComponent = new MonitoredServicesComponent(monitoringService);
+        MonitoredServicesComponent monitoredServicesComponent = new MonitoredServicesComponent(monitoringService, environmentService);
 
         configureDetailPanel();
 
@@ -109,6 +117,17 @@ public class ServicesView extends HorizontalLayout {
         addFormRow(endpointsForm, "Info endpoint", infoEndpointField);
         addFormRow(endpointsForm, "Health endpoint", healthEndpointField);
 
+        Set<Environment> originalEnvironments = service.getId() != null
+                ? environmentService.getEnvironmentsForService(service.getId())
+                : new HashSet<>();
+
+        environmentCheckboxGroup = new CheckboxGroup<>("Environments");
+        environmentCheckboxGroup.setItems(environmentService.getAllEnvironments());
+        environmentCheckboxGroup.setItemLabelGenerator(Environment::getName);
+        environmentCheckboxGroup.setValue(originalEnvironments);
+        environmentCheckboxGroup.setReadOnly(!editMode);
+        environmentCheckboxGroup.setWidthFull();
+
         saveButton = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
             String newUrl = urlField.getValue().trim();
             if (!newUrl.equals(originalUrl)) {
@@ -116,6 +135,10 @@ public class ServicesView extends HorizontalLayout {
             }
             service.setInfoEndpoint(infoEndpointField.getValue());
             service.setHealthEndpoint(healthEndpointField.getValue());
+            if (service.getId() != null) {
+                environmentService.updateServiceEnvironments(service, environmentCheckboxGroup.getValue());
+            }
+            monitoringService.notifyListeners(service);
             showDetails(service, false);
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
@@ -125,14 +148,17 @@ public class ServicesView extends HorizontalLayout {
         Runnable dirtyCheck = () -> {
             boolean changed = !urlField.getValue().equals(originalUrl)
                     || !infoEndpointField.getValue().equals(originalInfoEndpoint)
-                    || !healthEndpointField.getValue().equals(originalHealthEndpoint);
+                    || !healthEndpointField.getValue().equals(originalHealthEndpoint)
+                    || !environmentCheckboxGroup.getValue().equals(originalEnvironments);
             saveButton.setEnabled(changed);
         };
         urlField.addValueChangeListener(_ -> dirtyCheck.run());
         infoEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
         healthEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
+        environmentCheckboxGroup.addValueChangeListener(_ -> dirtyCheck.run());
 
-        detailPanel.add(new H3("Details"), form, new H3("Endpoints"), endpointsForm, saveButton);
+        detailPanel.add(new H3("Details"), form, new H3("Endpoints"), endpointsForm,
+                new H3("Environments"), environmentCheckboxGroup, saveButton);
     }
 
     private void addFormRow(FormLayout form, String label, Component value) {

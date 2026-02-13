@@ -6,6 +6,8 @@ import lombok.Setter;
 import se.valenzuela.monitoring.client.InfoEndpointResponse;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -41,6 +43,12 @@ public class MonitoredService {
 
     @Column(nullable = false)
     private String healthEndpoint;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "service_environment",
+            joinColumns = @JoinColumn(name = "service_id"),
+            inverseJoinColumns = @JoinColumn(name = "environment_id"))
+    private Set<Environment> environments = new HashSet<>();
 
     protected MonitoredService() {
     }

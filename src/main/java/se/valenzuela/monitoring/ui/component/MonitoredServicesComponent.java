@@ -15,12 +15,15 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.spring.annotation.UIScope;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
+import se.valenzuela.monitoring.model.Environment;
 import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.service.EnvironmentService;
 import se.valenzuela.monitoring.service.MonitoringService;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.function.Consumer;
 
 @Getter
@@ -30,10 +33,12 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
 
     private final ListDataProvider<MonitoredService> dataProvider;
     private final MonitoringService monitoringService;
+    private final EnvironmentService environmentService;
     private Consumer<MonitoredService> editListener;
 
-    public MonitoredServicesComponent(MonitoringService monitoringService) {
+    public MonitoredServicesComponent(MonitoringService monitoringService, EnvironmentService environmentService) {
         this.monitoringService = monitoringService;
+        this.environmentService = environmentService;
 
         dataProvider = new ListDataProvider<>(new ArrayList<>(monitoringService.getServices()));
 
@@ -48,6 +53,33 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
             icon.setSize("22px");
             return icon;
         }).setHeader("Status").setAutoWidth(true).setFlexGrow(0).setSortable(true);
+
+        addComponentColumn(service -> {
+            HorizontalLayout badges = new HorizontalLayout();
+            badges.setSpacing(true);
+            badges.setPadding(false);
+            if (service.getId() != null) {
+                Set<Environment> envs = environmentService.getEnvironmentsForService(service.getId());
+                for (Environment env : envs) {
+                    Span badge = new Span(env.getName());
+                    badge.getStyle()
+                            .set("font-size", "var(--lumo-font-size-xs)")
+                            .set("padding", "2px 8px")
+                            .set("border-radius", "var(--lumo-border-radius-s)");
+                    if (env.getColor() != null && !env.getColor().isBlank()) {
+                        badge.getStyle()
+                                .set("background-color", env.getColor())
+                                .set("color", "white");
+                    } else {
+                        badge.getStyle()
+                                .set("background-color", "var(--lumo-contrast-10pct)")
+                                .set("color", "var(--lumo-body-text-color)");
+                    }
+                    badges.add(badge);
+                }
+            }
+            return badges;
+        }).setHeader("Environments").setAutoWidth(true);
 
         addColumn(service -> {
             if (service.getLastUpdated() == null) {

@@ -14,5 +14,20 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+#    username: ${SMTP_USERNAME:}
+#    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+#          auth: true
+          starttls:
+            enable: true
 vaadin:
   launch-browser: true
+bootguard:
+  health-check:
+    interval: 30000
+    initial-delay: 10000

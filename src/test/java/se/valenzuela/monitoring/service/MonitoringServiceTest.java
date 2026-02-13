@@ -3,12 +3,17 @@ package se.valenzuela.monitoring.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.client.InfoEndpointResponse;
 import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
+import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
+import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
 import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
 
 import java.util.List;
@@ -38,11 +43,14 @@ class MonitoringServiceTest {
     @Mock
     private MonitoredServiceRepository repository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private MonitoringService monitoringService;
 
     @BeforeEach
     void setUp() {
-        monitoringService = new MonitoringService(restClient, repository);
+        monitoringService = new MonitoringService(restClient, repository, eventPublisher);
     }
 
     @SuppressWarnings("unchecked")
@@ -187,5 +195,32 @@ class MonitoringServiceTest {
         assertEquals("http://localhost:9090", service.getUrl());
         verify(repository).save(service);
         assertNotNull(notified.get());
+    }
+
+    @Test
+    void addService_publishesServiceAddedEvent() {
+        stubRestClient();
+        var info = new InfoEndpointResponse("test-app", "A test app", "1.0.0");
+        when(responseSpec.body(InfoEndpointResponse.class)).thenReturn(info);
+        when(repository.existsByUrl("http://localhost:8080")).thenReturn(false);
+        when(repository.save(any(MonitoredService.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        monitoringService.addService("http://localhost:8080");
+
+        ArgumentCaptor<MonitoringEventCarrier> captor = ArgumentCaptor.forClass(MonitoringEventCarrier.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertInstanceOf(ServiceAddedEvent.class, captor.getValue().getMonitoringEvent());
+    }
+
+    @Test
+    void removeService_publishesServiceRemovedEvent() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+
+        monitoringService.removeService(service);
+
+        ArgumentCaptor<MonitoringEventCarrier> captor = ArgumentCaptor.forClass(MonitoringEventCarrier.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertInstanceOf(ServiceRemovedEvent.class, captor.getValue().getMonitoringEvent());
+        verify(repository).delete(service);
     }
 }

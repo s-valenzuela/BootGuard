@@ -11,5 +11,11 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
 
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   mariadb_data:

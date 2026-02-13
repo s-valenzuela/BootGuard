@@ -1,13 +1,18 @@
 package se.valenzuela.monitoring.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.client.InfoEndpointResponse;
 import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
+import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
+import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
 import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
@@ -20,11 +25,14 @@ public class MonitoringService {
 
     private final RestClient restClient;
     private final MonitoredServiceRepository repository;
+    private final ApplicationEventPublisher eventPublisher;
     private final CopyOnWriteArrayList<Consumer<MonitoredService>> listeners = new CopyOnWriteArrayList<>();
 
-    public MonitoringService(RestClient restClient, MonitoredServiceRepository repository) {
+    public MonitoringService(RestClient restClient, MonitoredServiceRepository repository,
+                             ApplicationEventPublisher eventPublisher) {
         this.restClient = restClient;
         this.repository = repository;
+        this.eventPublisher = eventPublisher;
     }
 
     public boolean addService(String url) {
@@ -43,6 +51,8 @@ public class MonitoringService {
         }
         repository.save(service);
         listeners.forEach(listener -> listener.accept(service));
+        eventPublisher.publishEvent(new MonitoringEventCarrier(this,
+                new ServiceAddedEvent(service, Instant.now())));
         return true;
     }
 
@@ -90,6 +100,11 @@ public class MonitoringService {
             service.setHealthStatus(false);
             service.setHealthResponseStatus("DOWN");
         }
+        service.setLastUpdated(Instant.now());
+    }
+
+    public void notifyListeners(MonitoredService service) {
+        listeners.forEach(listener -> listener.accept(service));
     }
 
     public void updateServiceUrl(MonitoredService service, String newUrl) {
@@ -99,6 +114,8 @@ public class MonitoringService {
     }
 
     public void removeService(MonitoredService service) {
+        eventPublisher.publishEvent(new MonitoringEventCarrier(this,
+                new ServiceRemovedEvent(service, Instant.now())));
         repository.delete(service);
         listeners.forEach(listener -> listener.accept(service));
     }
