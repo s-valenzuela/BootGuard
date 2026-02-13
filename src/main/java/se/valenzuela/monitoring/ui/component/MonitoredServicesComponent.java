@@ -20,9 +20,12 @@ import se.valenzuela.monitoring.model.MonitoredService;
 import se.valenzuela.monitoring.service.EnvironmentService;
 import se.valenzuela.monitoring.service.MonitoringService;
 
+import java.util.Comparator;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -34,6 +37,8 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
     private final ListDataProvider<MonitoredService> dataProvider;
     private final MonitoringService monitoringService;
     private final EnvironmentService environmentService;
+    private final Map<Long, Set<Environment>> environmentCache = new HashMap<>();
+    private Set<Environment> environmentFilter = Set.of();
     private Consumer<MonitoredService> editListener;
 
     public MonitoredServicesComponent(MonitoringService monitoringService, EnvironmentService environmentService) {
@@ -54,30 +59,31 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
             return icon;
         }).setHeader("Status").setAutoWidth(true).setFlexGrow(0).setSortable(true);
 
+        loadEnvironmentCache();
+
         addComponentColumn(service -> {
             HorizontalLayout badges = new HorizontalLayout();
             badges.setSpacing(true);
             badges.setPadding(false);
-            if (service.getId() != null) {
-                Set<Environment> envs = environmentService.getEnvironmentsForService(service.getId());
-                for (Environment env : envs) {
-                    Span badge = new Span(env.getName());
+            environmentCache.getOrDefault(service.getId(), Set.of()).stream()
+                    .sorted(Comparator.comparingInt(Environment::getDisplayOrder).thenComparing(Environment::getName))
+                    .forEach(env -> {
+                Span badge = new Span(env.getName());
+                badge.getStyle()
+                        .set("font-size", "var(--lumo-font-size-xs)")
+                        .set("padding", "2px 8px")
+                        .set("border-radius", "var(--lumo-border-radius-s)");
+                if (env.getColor() != null && !env.getColor().isBlank()) {
                     badge.getStyle()
-                            .set("font-size", "var(--lumo-font-size-xs)")
-                            .set("padding", "2px 8px")
-                            .set("border-radius", "var(--lumo-border-radius-s)");
-                    if (env.getColor() != null && !env.getColor().isBlank()) {
-                        badge.getStyle()
-                                .set("background-color", env.getColor())
-                                .set("color", "white");
-                    } else {
-                        badge.getStyle()
-                                .set("background-color", "var(--lumo-contrast-10pct)")
-                                .set("color", "var(--lumo-body-text-color)");
-                    }
-                    badges.add(badge);
+                            .set("background-color", env.getColor())
+                            .set("color", "white");
+                } else {
+                    badge.getStyle()
+                            .set("background-color", "var(--lumo-contrast-10pct)")
+                            .set("color", "var(--lumo-body-text-color)");
                 }
-            }
+                badges.add(badge);
+            });
             return badges;
         }).setHeader("Environments").setAutoWidth(true);
 
@@ -111,10 +117,11 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         Consumer<MonitoredService> listener = _ -> {
             if (ui != null && ui.isAttached()) {
                 var services = monitoringService.getServices();
+                loadEnvironmentCache();
                 ui.access(() -> {
                     dataProvider.getItems().clear();
                     dataProvider.getItems().addAll(services);
-                    dataProvider.refreshAll();
+                    applyEnvironmentFilter();
                 });
             }
         };
@@ -123,8 +130,33 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         addDetachListener(_ -> monitoringService.removeListener(listener));
     }
 
+    public void setEnvironmentFilter(Set<Environment> filter) {
+        this.environmentFilter = filter != null ? filter : Set.of();
+        applyEnvironmentFilter();
+    }
+
     public void setEditListener(Consumer<MonitoredService> editListener) {
         this.editListener = editListener;
+    }
+
+    private void loadEnvironmentCache() {
+        environmentCache.clear();
+        for (MonitoredService service : dataProvider.getItems()) {
+            if (service.getId() != null) {
+                environmentCache.put(service.getId(), environmentService.getEnvironmentsForService(service.getId()));
+            }
+        }
+    }
+
+    private void applyEnvironmentFilter() {
+        if (environmentFilter.isEmpty()) {
+            dataProvider.clearFilters();
+        } else {
+            dataProvider.setFilter(service -> {
+                Set<Environment> envs = environmentCache.getOrDefault(service.getId(), Set.of());
+                return environmentFilter.stream().anyMatch(envs::contains);
+            });
+        }
     }
 
     private void openDeleteDialog(MonitoredService service) {

@@ -27,7 +27,7 @@ public class ViewToolbar extends Composite<Header> {
 
         if (components.length > 0) {
             var actions = new Div(components);
-            actions.addClassNames(LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN, LumoUtility.JustifyContent.BETWEEN, LumoUtility.Flex.GROW, LumoUtility.Gap.SMALL,
+            actions.addClassNames(LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN, LumoUtility.JustifyContent.END, LumoUtility.Flex.GROW, LumoUtility.Gap.SMALL,
                     LumoUtility.FlexDirection.Breakpoint.Medium.ROW);
             getContent().add(actions);
         }

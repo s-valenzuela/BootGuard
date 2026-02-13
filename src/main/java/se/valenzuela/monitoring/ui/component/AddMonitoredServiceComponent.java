@@ -1,13 +1,20 @@
 package se.valenzuela.monitoring.ui.component;
 
-import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
+import com.vaadin.flow.component.button.ButtonVariant;
+import com.vaadin.flow.component.checkbox.CheckboxGroup;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.spring.annotation.UIScope;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
+import se.valenzuela.monitoring.model.Environment;
+import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.service.EnvironmentService;
 import se.valenzuela.monitoring.service.MonitoringService;
 
 import java.net.URI;
@@ -16,62 +23,96 @@ import java.net.URISyntaxException;
 @Getter
 @UIScope
 @Component
-public class AddMonitoredServiceComponent extends Composite<HorizontalLayout> {
+public class AddMonitoredServiceComponent extends Button {
 
     private final MonitoringService monitoringService;
+    private final EnvironmentService environmentService;
 
-    private final Span label = new Span("Service instance base URL:");
-    private final TextField url = new TextField();
-
-    public AddMonitoredServiceComponent(MonitoringService monitoringService) {
+    public AddMonitoredServiceComponent(MonitoringService monitoringService, EnvironmentService environmentService) {
+        super(VaadinIcon.PLUS.create());
         this.monitoringService = monitoringService;
-        Button addButton = new Button("+", _ -> addButtonClickListener());
-
-        getContent().setAlignItems(HorizontalLayout.Alignment.BASELINE);
-        getContent().add(label, url, addButton);
-
-        url.addValueChangeListener(_ -> url.setInvalid(false));
+        this.environmentService = environmentService;
+        addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        addClickListener(_ -> openDialog());
     }
 
-    public String getUrl() {
-        return url.getValue();
-    }
+    private void openDialog() {
+        var dialog = new Dialog();
+        dialog.setHeaderTitle("Add Service");
+        dialog.setWidth("500px");
 
-    public void setUrl(String value) {
-        url.setValue(value);
-    }
+        var urlField = new TextField("Service URL");
+        urlField.setPlaceholder("http://localhost:8080");
+        urlField.setWidthFull();
+        urlField.setRequired(true);
+        urlField.addValueChangeListener(_ -> urlField.setInvalid(false));
 
-    public void addButtonClickListener() {
-        var serviceUrl = getUrl().trim();
-        url.setInvalid(false);
-        url.setErrorMessage(null);
+        var infoEndpointField = new TextField("Info Endpoint");
+        infoEndpointField.setPlaceholder(MonitoredService.DEFAULT_INFO_ENDPOINT);
+        infoEndpointField.setWidthFull();
 
-        if (serviceUrl.isEmpty()) {
-            url.setInvalid(true);
-            url.setErrorMessage("Please enter a service URL");
-            return;
-        }
+        var healthEndpointField = new TextField("Health Endpoint");
+        healthEndpointField.setPlaceholder(MonitoredService.DEFAULT_HEALTH_ENDPOINT);
+        healthEndpointField.setWidthFull();
 
-        try {
-            URI uri = new URI(serviceUrl);
-            String scheme = uri.getScheme();
-            if (scheme == null || !(scheme.equals("http") || scheme.equals("https"))) {
-                throw new URISyntaxException(serviceUrl, "URL must start with http or https");
+        var environmentsGroup = new CheckboxGroup<Environment>("Environments");
+        environmentsGroup.setItems(environmentService.getAllEnvironments());
+        environmentsGroup.setItemLabelGenerator(Environment::getName);
+        environmentsGroup.setWidthFull();
+
+        var content = new VerticalLayout(urlField, infoEndpointField, healthEndpointField, environmentsGroup);
+        content.setPadding(false);
+        content.setSpacing(true);
+        dialog.add(content);
+
+        var addButton = new Button("Add", _ -> {
+            String serviceUrl = urlField.getValue().trim();
+            urlField.setInvalid(false);
+            urlField.setErrorMessage(null);
+
+            if (serviceUrl.isEmpty()) {
+                urlField.setInvalid(true);
+                urlField.setErrorMessage("Please enter a service URL");
+                return;
             }
-        } catch (URISyntaxException e) {
-            url.setInvalid(true);
-            url.setErrorMessage("Invalid URL format");
-            return;
-        }
 
-        boolean serviceAdded = monitoringService.addService(getUrl());
+            try {
+                URI uri = new URI(serviceUrl);
+                String scheme = uri.getScheme();
+                if (scheme == null || !(scheme.equals("http") || scheme.equals("https"))) {
+                    throw new URISyntaxException(serviceUrl, "URL must start with http or https");
+                }
+            } catch (URISyntaxException e) {
+                urlField.setInvalid(true);
+                urlField.setErrorMessage("Invalid URL format");
+                return;
+            }
 
-        if (!serviceAdded) {
-            url.setInvalid(true);
-            url.setErrorMessage("Service already exists: " + serviceUrl);
-        } else {
-            url.clear();
-        }
+            String infoEndpoint = infoEndpointField.getValue().trim();
+            String healthEndpoint = healthEndpointField.getValue().trim();
+
+            MonitoredService service = monitoringService.addServiceWithEndpoints(
+                    serviceUrl,
+                    infoEndpoint.isEmpty() ? null : infoEndpoint,
+                    healthEndpoint.isEmpty() ? null : healthEndpoint);
+
+            if (service == null) {
+                urlField.setInvalid(true);
+                urlField.setErrorMessage("Service already exists: " + serviceUrl);
+            } else {
+                if (!environmentsGroup.getValue().isEmpty()) {
+                    environmentService.updateServiceEnvironments(service, environmentsGroup.getValue());
+                }
+                dialog.close();
+                Notification.show("Service added", 3000, Notification.Position.BOTTOM_START)
+                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            }
+        });
+        addButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        var cancelButton = new Button("Cancel", _ -> dialog.close());
+
+        dialog.getFooter().add(cancelButton, addButton);
+        dialog.open();
     }
-
 }

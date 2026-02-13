@@ -36,10 +36,20 @@ public class MonitoringService {
     }
 
     public boolean addService(String url) {
+        return addServiceWithEndpoints(url, null, null) != null;
+    }
+
+    public MonitoredService addServiceWithEndpoints(String url, String infoEndpoint, String healthEndpoint) {
         if (repository.existsByUrl(url)) {
-            return false;
+            return null;
         }
         MonitoredService service = new MonitoredService(url);
+        if (infoEndpoint != null && !infoEndpoint.isBlank()) {
+            service.setInfoEndpoint(infoEndpoint);
+        }
+        if (healthEndpoint != null && !healthEndpoint.isBlank()) {
+            service.setHealthEndpoint(healthEndpoint);
+        }
         try {
             InfoEndpointResponse info = restClient.get()
                     .uri(url + service.getInfoEndpoint())
@@ -53,7 +63,7 @@ public class MonitoringService {
         listeners.forEach(listener -> listener.accept(service));
         eventPublisher.publishEvent(new MonitoringEventCarrier(this,
                 new ServiceAddedEvent(service, Instant.now())));
-        return true;
+        return service;
     }
 
     public void addListener(Consumer<MonitoredService> listener) {

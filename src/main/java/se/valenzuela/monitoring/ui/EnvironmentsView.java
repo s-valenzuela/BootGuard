@@ -4,6 +4,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridSortOrder;
 import com.vaadin.flow.component.html.Main;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -13,6 +14,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
+import se.valenzuela.monitoring.ui.component.ColorPickerField;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
@@ -73,7 +75,8 @@ public class EnvironmentsView extends Main {
             return layout;
         }).setHeader("Color").setFlexGrow(1);
 
-        g.addColumn(Environment::getDisplayOrder).setHeader("Display Order").setSortable(true).setFlexGrow(0).setWidth("140px");
+        g.addColumn(Environment::getDisplayOrder).setHeader("Display Order").setSortable(true).setFlexGrow(0).setWidth("140px").setKey("displayOrder");
+        g.sort(GridSortOrder.asc(g.getColumnByKey("displayOrder")).build());
 
         g.addColumn(new ComponentRenderer<>(env -> {
             var editButton = new Button(VaadinIcon.EDIT.create(), _ -> openDialog(env));
@@ -98,9 +101,7 @@ public class EnvironmentsView extends Main {
         nameField.setRequired(true);
         nameField.setWidthFull();
 
-        var colorField = new TextField("Color (hex)");
-        colorField.setPlaceholder("#3B82F6");
-        colorField.setMaxLength(7);
+        var colorField = new ColorPickerField("Color");
         colorField.setWidthFull();
 
         var orderField = new IntegerField("Display Order");
@@ -110,7 +111,7 @@ public class EnvironmentsView extends Main {
 
         if (existing != null) {
             nameField.setValue(existing.getName());
-            colorField.setValue(existing.getColor() != null ? existing.getColor() : "");
+            colorField.setValue(existing.getColor());
             orderField.setValue(existing.getDisplayOrder());
         }
 
@@ -139,7 +140,7 @@ public class EnvironmentsView extends Main {
                 return;
             }
 
-            String color = colorField.getValue().trim();
+            String color = colorField.getValue() != null ? colorField.getValue().trim() : "";
             int order = orderField.getValue() != null ? orderField.getValue() : 0;
 
             if (existing == null) {

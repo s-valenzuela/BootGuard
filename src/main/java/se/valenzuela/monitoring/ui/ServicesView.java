@@ -28,6 +28,7 @@ public class ServicesView extends HorizontalLayout {
     private final VerticalLayout detailPanel = new VerticalLayout();
     private final MonitoringService monitoringService;
     private final EnvironmentService environmentService;
+    private final MonitoredServicesComponent monitoredServicesComponent;
     private TextField urlField;
     private TextField infoEndpointField;
     private TextField healthEndpointField;
@@ -39,7 +40,7 @@ public class ServicesView extends HorizontalLayout {
         this.environmentService = environmentService;
         setSizeFull();
 
-        MonitoredServicesComponent monitoredServicesComponent = new MonitoredServicesComponent(monitoringService, environmentService);
+        monitoredServicesComponent = new MonitoredServicesComponent(monitoringService, environmentService);
 
         configureDetailPanel();
 
@@ -181,5 +182,9 @@ public class ServicesView extends HorizontalLayout {
         wrapper.setPadding(false);
         wrapper.setMargin(false);
         return wrapper;
+    }
+
+    public MonitoredServicesComponent getMonitoredServicesComponent() {
+        return monitoredServicesComponent;
     }
 }
