@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @Theme("default")
 public class MonitoringApplication implements AppShellConfigurator {
 
-	public static void main(String[] args) {
+	static void main(String[] args) {
 		SpringApplication.run(MonitoringApplication.class, args);
 	}
 

@@ -27,7 +27,7 @@ public class ColorPickerField extends Div {
         hexField.setClearButtonVisible(true);
 
         colorInput.getElement().addEventListener("input", e -> {
-            String color = e.getEventData().getString("event.target.value");
+            String color = e.getEventData().path("event.target.value").asText();
             if (color != null && !color.isBlank()) {
                 value = color;
                 hexField.setValue(color);

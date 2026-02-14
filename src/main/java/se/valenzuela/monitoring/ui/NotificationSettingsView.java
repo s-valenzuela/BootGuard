@@ -1,9 +1,11 @@
 package se.valenzuela.monitoring.ui;
 
+import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Main;
@@ -14,28 +16,35 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
-import com.vaadin.flow.component.textfield.TextArea;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import se.valenzuela.monitoring.model.MonitoredService;
 import se.valenzuela.monitoring.notification.channel.NotificationChannel;
+import se.valenzuela.monitoring.notification.channel.NotificationChannel.ConfigField;
+import se.valenzuela.monitoring.notification.channel.NotificationChannel.FieldType;
 import se.valenzuela.monitoring.notification.config.NotificationChannelConfig;
 import se.valenzuela.monitoring.notification.config.NotificationServiceOverride;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
 import se.valenzuela.monitoring.notification.service.NotificationConfigService;
 import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.ui.component.EmailListField;
 import se.valenzuela.monitoring.ui.component.ViewToolbar;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Route("notifications")
 @Menu(order = 10, icon = "vaadin:bell", title = "Notifications")
 public class NotificationSettingsView extends Main {
+
+    private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
 
     private final List<NotificationChannel> channels;
     private final NotificationConfigService configService;
@@ -86,18 +95,16 @@ public class NotificationSettingsView extends Main {
         var enabledCheckbox = new Checkbox("Enabled");
         enabledCheckbox.setValue(globalConfig.isEnabled());
 
-        var helpText = new Span(channel.configDescription());
-        helpText.getStyle().set("color", "var(--lumo-secondary-text-color)")
-                .set("font-size", "var(--lumo-font-size-s)");
-
-        var configArea = new TextArea("Configuration JSON");
-        configArea.setWidthFull();
-        configArea.setValue(globalConfig.getConfigJson() != null ? globalConfig.getConfigJson() : "{}");
-        configArea.setMinHeight("100px");
+        var formResult = buildConfigForm(channel.configFields(), globalConfig.getConfigJson());
+        var form = new VerticalLayout();
+        form.setPadding(false);
+        form.setSpacing(true);
+        formResult.components().values().forEach(form::add);
 
         var saveButton = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
+            String json = fieldsToJson(formResult.valueGetters());
             globalConfig.setEnabled(enabledCheckbox.getValue());
-            globalConfig.setConfigJson(configArea.getValue());
+            globalConfig.setConfigJson(json);
             configService.saveGlobalConfig(globalConfig);
             Notification.show("Settings saved for " + channel.displayName(),
                     3000, Notification.Position.BOTTOM_START)
@@ -106,7 +113,8 @@ public class NotificationSettingsView extends Main {
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         var testButton = new Button("Send Test", VaadinIcon.ENVELOPE.create(), _ -> {
-            if (!channel.validate(configArea.getValue())) {
+            String json = fieldsToJson(formResult.valueGetters());
+            if (!channel.validate(json)) {
                 Notification.show("Invalid configuration",
                         3000, Notification.Position.BOTTOM_START)
                         .addThemeVariants(NotificationVariant.LUMO_ERROR);
@@ -116,14 +124,14 @@ public class NotificationSettingsView extends Main {
             testService.setName("Test Service");
             var testEvent = new ServiceHealthChangedEvent(
                     testService, true, false, Instant.now());
-            channel.send(testEvent, configArea.getValue());
+            channel.send(testEvent, json);
             Notification.show("Test notification sent via " + channel.displayName(),
                     3000, Notification.Position.BOTTOM_START);
         });
 
         var buttons = new HorizontalLayout(saveButton, testButton);
 
-        card.add(header, enabledCheckbox, helpText, configArea, buttons);
+        card.add(header, enabledCheckbox, form, buttons);
         return card;
     }
 
@@ -173,6 +181,59 @@ public class NotificationSettingsView extends Main {
         return "Inherit";
     }
 
+    private record ConfigFormResult(Map<String, Component> components, Map<String, Supplier<String>> valueGetters) {
+    }
+
+    private ConfigFormResult buildConfigForm(List<ConfigField> fields, String json) {
+        JsonNode node = null;
+        if (json != null && !json.isBlank()) {
+            try {
+                node = JSON_MAPPER.readTree(json);
+            } catch (Exception ignored) {
+            }
+        }
+        Map<String, Component> components = new LinkedHashMap<>();
+        Map<String, Supplier<String>> valueGetters = new LinkedHashMap<>();
+        for (ConfigField cf : fields) {
+            String value = "";
+            if (node != null && node.has(cf.key())) {
+                value = node.path(cf.key()).asText("");
+            }
+
+            if (cf.type() == FieldType.EMAIL_LIST) {
+                var emailList = new EmailListField(cf.label());
+                emailList.setValue(value);
+                components.put(cf.key(), emailList);
+                valueGetters.put(cf.key(), emailList::getValue);
+            } else {
+                var tf = new TextField(cf.label());
+                tf.setRequiredIndicatorVisible(cf.required());
+                if (cf.description() != null) {
+                    tf.setHelperText(cf.description());
+                }
+                if (value.isEmpty() && cf.defaultValue() != null) {
+                    tf.setPlaceholder(cf.defaultValue());
+                }
+                tf.setValue(value);
+                tf.setWidthFull();
+                components.put(cf.key(), tf);
+                valueGetters.put(cf.key(), () -> tf.getValue().trim());
+            }
+        }
+        return new ConfigFormResult(components, valueGetters);
+    }
+
+    private String fieldsToJson(Map<String, Supplier<String>> valueGetters) {
+        ObjectNode node = JSON_MAPPER.createObjectNode();
+        valueGetters.forEach((key, getter) -> {
+            String val = getter.get();
+            if (!val.isEmpty()) {
+                node.put(key, val);
+            }
+        });
+        return node.toString();
+    }
+
     private void openOverrideDialog(MonitoredService service) {
         var dialog = new Dialog();
         dialog.setHeaderTitle("Override for " + (service.getName() != null ? service.getName() : service.getUrl()));
@@ -198,19 +259,26 @@ public class NotificationSettingsView extends Main {
             stateSelect.setLabel("State");
             stateSelect.setItems("Inherit", "Enabled", "Disabled");
 
-            var overrideConfigArea = new TextArea("Config JSON override (optional)");
-            overrideConfigArea.setWidthFull();
-            overrideConfigArea.setMinHeight("80px");
-
             NotificationServiceOverride existing = existingOverrides.get(channel.channelType());
             if (existing != null && existing.getEnabled() != null) {
                 stateSelect.setValue(existing.getEnabled() ? "Enabled" : "Disabled");
             } else {
                 stateSelect.setValue("Inherit");
             }
-            if (existing != null && existing.getConfigJson() != null) {
-                overrideConfigArea.setValue(existing.getConfigJson());
-            }
+
+            String existingJson = existing != null && existing.getConfigJson() != null
+                    ? existing.getConfigJson() : null;
+            var overrideResult = buildConfigForm(channel.configFields(), existingJson);
+            var overrideForm = new VerticalLayout();
+            overrideForm.setPadding(false);
+            overrideForm.setSpacing(true);
+            overrideResult.components().forEach((_, comp) -> {
+                if (comp instanceof TextField tf) {
+                    tf.setRequiredIndicatorVisible(false);
+                    tf.setPlaceholder("Leave empty to inherit");
+                }
+                overrideForm.add(comp);
+            });
 
             var saveOverrideButton = new Button("Save", _ -> {
                 String selected = stateSelect.getValue();
@@ -222,8 +290,8 @@ public class NotificationSettingsView extends Main {
                     NotificationServiceOverride override = existing != null ? existing
                             : new NotificationServiceOverride(service, channel.channelType());
                     override.setEnabled("Enabled".equals(selected));
-                    String configJson = overrideConfigArea.getValue();
-                    override.setConfigJson(configJson != null && !configJson.isBlank() ? configJson : null);
+                    String json = fieldsToJson(overrideResult.valueGetters());
+                    override.setConfigJson("{}".equals(json) ? null : json);
                     configService.saveOverride(override);
                 }
                 Notification.show("Override saved for " + channel.displayName(),
@@ -232,7 +300,7 @@ public class NotificationSettingsView extends Main {
             });
             saveOverrideButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
 
-            channelSection.add(channelLabel, stateSelect, overrideConfigArea, saveOverrideButton);
+            channelSection.add(channelLabel, stateSelect, overrideForm, saveOverrideButton);
             content.add(channelSection);
         }
 

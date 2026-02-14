@@ -46,15 +46,10 @@ public class MainView extends Main {
         actionBar.setAlignItems(HorizontalLayout.Alignment.END);
         actionBar.setPadding(false);
 
-        var contentDiv = new Div();
+        var contentDiv = new Div(servicesView);
         contentDiv.addClassNames(LumoUtility.Flex.GROW, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
-                LumoUtility.AlignItems.CENTER, LumoUtility.JustifyContent.CENTER);
-
-        var centerDiv = new Div(servicesView);
-        centerDiv.addClassNames(LumoUtility.Flex.GROW, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
-                LumoUtility.JustifyContent.CENTER);
-        centerDiv.setSizeFull();
-        contentDiv.add(centerDiv);
+                LumoUtility.Overflow.HIDDEN);
+        contentDiv.setSizeFull();
 
         add(new ViewToolbar("Spring Boot monitoring"));
         add(actionBar);

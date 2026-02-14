@@ -1,7 +1,7 @@
 package se.valenzuela.monitoring.notification.channel;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -9,16 +9,18 @@ import org.springframework.stereotype.Component;
 import se.valenzuela.monitoring.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.*;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class EmailNotificationChannel implements NotificationChannel {
 
     private final JavaMailSender mailSender;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public EmailNotificationChannel(JavaMailSender mailSender, ObjectMapper objectMapper) {
+    public EmailNotificationChannel(JavaMailSender mailSender, JsonMapper jsonMapper) {
         this.mailSender = mailSender;
-        this.objectMapper = objectMapper;
+        this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -34,7 +36,7 @@ public class EmailNotificationChannel implements NotificationChannel {
     @Override
     public void send(MonitoringEvent event, String configJson) {
         try {
-            JsonNode config = objectMapper.readTree(configJson);
+            JsonNode config = jsonMapper.readTree(configJson);
             String recipients = config.path("recipients").asText("");
             String fromAddress = config.path("fromAddress").asText("bootguard@localhost");
             String subjectPrefix = config.path("subjectPrefix").asText("[BootGuard]");
@@ -64,7 +66,7 @@ public class EmailNotificationChannel implements NotificationChannel {
     @Override
     public boolean validate(String configJson) {
         try {
-            JsonNode config = objectMapper.readTree(configJson);
+            JsonNode config = jsonMapper.readTree(configJson);
             return config.has("recipients") && config.has("fromAddress");
         } catch (Exception e) {
             return false;
@@ -74,6 +76,15 @@ public class EmailNotificationChannel implements NotificationChannel {
     @Override
     public String configDescription() {
         return "JSON with keys: recipients (comma-separated emails), fromAddress, subjectPrefix";
+    }
+
+    @Override
+    public List<ConfigField> configFields() {
+        return List.of(
+                new ConfigField("recipients", "Recipients", true, "", "Email addresses", FieldType.EMAIL_LIST),
+                new ConfigField("fromAddress", "From address", true, "bootguard@localhost", "Sender email address"),
+                new ConfigField("subjectPrefix", "Subject prefix", false, "[BootGuard]", "Prefix for email subjects")
+        );
     }
 
     private String buildSubject(MonitoringEvent event, String prefix) {

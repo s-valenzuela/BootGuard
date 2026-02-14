@@ -1,6 +1,6 @@
 package se.valenzuela.monitoring.notification.channel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,7 @@ class EmailNotificationChannelTest {
 
     @BeforeEach
     void setUp() {
-        channel = new EmailNotificationChannel(mailSender, new ObjectMapper());
+        channel = new EmailNotificationChannel(mailSender, JsonMapper.builder().build());
     }
 
     private MonitoredService createService() {
