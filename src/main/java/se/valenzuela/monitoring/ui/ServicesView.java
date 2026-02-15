@@ -63,7 +63,7 @@ public class ServicesView extends HorizontalLayout {
     private void configureDetailPanel() {
         detailPanel.setWidth("500px");
         detailPanel.setPadding(true);
-        detailPanel.getStyle().set("border-left", "1px solid var(--lumo-contrast-10pct)");
+        detailPanel.addClassName("detail-panel");
         detailPanel.setVisible(false); // hidden until selection
     }
 
@@ -164,7 +164,7 @@ public class ServicesView extends HorizontalLayout {
 
     private void addFormRow(FormLayout form, String label, Component value) {
         Span labelSpan = new Span(label);
-        labelSpan.getStyle().set("font-weight", "500").set("color", "var(--lumo-secondary-text-color)");
+        labelSpan.addClassName("form-label");
         form.add(labelSpan, value);
     }
 

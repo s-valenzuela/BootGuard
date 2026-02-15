@@ -23,7 +23,7 @@ import se.valenzuela.monitoring.ui.component.ViewToolbar;
 public class MainView extends Main {
 
     public MainView(MonitoringService monitoringService, EnvironmentService environmentService) {
-        addClassNames(LumoUtility.Padding.MEDIUM, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
+        addClassNames("view-content", LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
                 LumoUtility.BoxSizing.BORDER);
         setSizeFull();
 

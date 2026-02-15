@@ -26,6 +26,6 @@ public interface NotificationChannel {
     }
 
     enum FieldType {
-        TEXT, EMAIL_LIST
+        TEXT, EMAIL_LIST, SECRET
     }
 }

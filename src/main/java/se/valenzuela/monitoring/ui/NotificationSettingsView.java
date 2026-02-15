@@ -5,7 +5,6 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.dialog.Dialog;
-import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Main;
@@ -36,7 +35,10 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -57,30 +59,33 @@ public class NotificationSettingsView extends Main {
         this.configService = configService;
         this.monitoringService = monitoringService;
 
-        addClassNames(LumoUtility.Padding.MEDIUM, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
-                LumoUtility.BoxSizing.BORDER);
-        setSizeFull();
+        addClassNames("view-content", LumoUtility.BoxSizing.BORDER, "scrollable-page");
+        setWidthFull();
 
         add(new ViewToolbar("Notification Settings"));
 
         var content = new VerticalLayout();
         content.setPadding(false);
         content.setSpacing(true);
-        content.setSizeFull();
+        content.setWidthFull();
 
         content.add(new H3("Channel Settings"));
         channels.forEach(channel -> content.add(createChannelCard(channel)));
 
         content.add(new H3("Per-Service Overrides"));
-        content.add(createServiceOverridesGrid());
+        var grid = createServiceOverridesGrid();
+        grid.setMinHeight("300px");
+        grid.setHeight(null);
+        grid.setAllRowsVisible(true);
+        content.add(grid);
 
         add(content);
     }
 
     private VerticalLayout createChannelCard(NotificationChannel channel) {
         var card = new VerticalLayout();
-        card.addClassNames(LumoUtility.Border.ALL, LumoUtility.BorderRadius.MEDIUM, LumoUtility.Padding.MEDIUM);
-        card.setSpacing(true);
+        card.addClassNames("channel-card");
+        card.setSpacing(false);
 
         Optional<NotificationChannelConfig> globalConfigOpt = configService.getGlobalConfig(channel.channelType());
         NotificationChannelConfig globalConfig = globalConfigOpt.orElseGet(() ->
@@ -89,7 +94,7 @@ public class NotificationSettingsView extends Main {
         var header = new HorizontalLayout();
         header.setAlignItems(HorizontalLayout.Alignment.CENTER);
         var title = new Span(channel.displayName());
-        title.getStyle().set("font-weight", "600").set("font-size", "var(--lumo-font-size-l)");
+        title.addClassName("channel-card-title");
         header.add(title);
 
         var enabledCheckbox = new Checkbox("Enabled");
@@ -98,7 +103,8 @@ public class NotificationSettingsView extends Main {
         var formResult = buildConfigForm(channel.configFields(), globalConfig.getConfigJson());
         var form = new VerticalLayout();
         form.setPadding(false);
-        form.setSpacing(true);
+        form.setSpacing(false);
+        form.addClassName("channel-card-form");
         formResult.components().values().forEach(form::add);
 
         var saveButton = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
@@ -131,13 +137,27 @@ public class NotificationSettingsView extends Main {
 
         var buttons = new HorizontalLayout(saveButton, testButton);
 
+        form.setVisible(enabledCheckbox.getValue());
+        buttons.setVisible(enabledCheckbox.getValue());
+        enabledCheckbox.addValueChangeListener(e -> {
+            boolean enabled = e.getValue();
+            form.setVisible(enabled);
+            buttons.setVisible(enabled);
+            if (!enabled) {
+                globalConfig.setEnabled(false);
+                configService.saveGlobalConfig(globalConfig);
+                Notification.show(channel.displayName() + " disabled",
+                        3000, Notification.Position.BOTTOM_START);
+            }
+        });
+
         card.add(header, enabledCheckbox, form, buttons);
         return card;
     }
 
     private Grid<MonitoredService> createServiceOverridesGrid() {
         var grid = new Grid<MonitoredService>();
-        grid.setSizeFull();
+        grid.setWidthFull();
 
         grid.addColumn(service -> service.getName() != null ? service.getName() : service.getUrl())
                 .setHeader("Service")
@@ -147,14 +167,11 @@ public class NotificationSettingsView extends Main {
             grid.addComponentColumn(service -> {
                 String effectiveState = getEffectiveState(service, channel.channelType());
                 var badge = new Span(effectiveState);
-                badge.getStyle().set("font-size", "var(--lumo-font-size-s)");
-                if ("Enabled".equals(effectiveState)) {
-                    badge.getStyle().set("color", "var(--lumo-success-color)");
-                } else if ("Disabled".equals(effectiveState)) {
-                    badge.getStyle().set("color", "var(--lumo-error-color)");
-                } else {
-                    badge.getStyle().set("color", "var(--lumo-secondary-text-color)");
-                }
+                badge.addClassName(switch (effectiveState) {
+                    case "Enabled" -> "override-state--enabled";
+                    case "Disabled" -> "override-state--disabled";
+                    default -> "override-state--inherit";
+                });
                 return badge;
             }).setHeader(channel.displayName()).setFlexGrow(1);
         }
@@ -194,30 +211,49 @@ public class NotificationSettingsView extends Main {
         }
         Map<String, Component> components = new LinkedHashMap<>();
         Map<String, Supplier<String>> valueGetters = new LinkedHashMap<>();
-        for (ConfigField cf : fields) {
+        for (ConfigField field : fields) {
             String value = "";
-            if (node != null && node.has(cf.key())) {
-                value = node.path(cf.key()).asText("");
+            if (node != null && node.has(field.key())) {
+                value = node.path(field.key()).asString("");
             }
 
-            if (cf.type() == FieldType.EMAIL_LIST) {
-                var emailList = new EmailListField(cf.label());
+            if (field.type() == FieldType.EMAIL_LIST) {
+                var emailList = new EmailListField(field.label());
                 emailList.setValue(value);
-                components.put(cf.key(), emailList);
-                valueGetters.put(cf.key(), emailList::getValue);
-            } else {
-                var tf = new TextField(cf.label());
-                tf.setRequiredIndicatorVisible(cf.required());
-                if (cf.description() != null) {
-                    tf.setHelperText(cf.description());
+                components.put(field.key(), emailList);
+                valueGetters.put(field.key(), emailList::getValue);
+            } else if (field.type() == FieldType.SECRET) {
+                var tf = new TextField(field.label());
+                tf.setRequiredIndicatorVisible(field.required());
+                if (field.description() != null) {
+                    tf.setHelperText(field.description());
                 }
-                if (value.isEmpty() && cf.defaultValue() != null) {
-                    tf.setPlaceholder(cf.defaultValue());
+                String fullValue = value;
+                if (!value.isEmpty()) {
+                    tf.setValue(maskSecret(value));
+                }
+                tf.setWidthFull();
+                components.put(field.key(), tf);
+                valueGetters.put(field.key(), () -> {
+                    String current = tf.getValue().trim();
+                    if (current.endsWith("**********") && !fullValue.isEmpty()) {
+                        return fullValue;
+                    }
+                    return current;
+                });
+            } else {
+                var tf = new TextField(field.label());
+                tf.setRequiredIndicatorVisible(field.required());
+                if (field.description() != null) {
+                    tf.setHelperText(field.description());
+                }
+                if (value.isEmpty() && field.defaultValue() != null) {
+                    tf.setPlaceholder(field.defaultValue());
                 }
                 tf.setValue(value);
                 tf.setWidthFull();
-                components.put(cf.key(), tf);
-                valueGetters.put(cf.key(), () -> tf.getValue().trim());
+                components.put(field.key(), tf);
+                valueGetters.put(field.key(), () -> tf.getValue().trim());
             }
         }
         return new ConfigFormResult(components, valueGetters);
@@ -253,7 +289,7 @@ public class NotificationSettingsView extends Main {
             channelSection.setSpacing(false);
 
             var channelLabel = new Span(channel.displayName());
-            channelLabel.getStyle().set("font-weight", "600");
+            channelLabel.addClassName("channel-card-title");
 
             var stateSelect = new Select<String>();
             stateSelect.setLabel("State");
@@ -304,9 +340,20 @@ public class NotificationSettingsView extends Main {
             content.add(channelSection);
         }
 
+        var scrollable = new VerticalLayout(content);
+        scrollable.setPadding(false);
+        scrollable.addClassName("dialog-scroll-content");
+
         var closeButton = new Button("Close", _ -> dialog.close());
         dialog.getFooter().add(closeButton);
-        dialog.add(content);
+        dialog.add(scrollable);
         dialog.open();
+    }
+
+    private static String maskSecret(String value) {
+        if (value.length() <= 10) {
+            return "*".repeat(value.length());
+        }
+        return value.substring(0, value.length() - 10) + "**********";
     }
 }

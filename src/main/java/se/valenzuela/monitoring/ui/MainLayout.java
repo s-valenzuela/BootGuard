@@ -32,7 +32,7 @@ public final class MainLayout extends AppLayout {
         var icon = VaadinIcon.MOON.create();
         var button = new Button(icon, e -> toggleDarkMode());
         button.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        button.getStyle().set("margin-left", "auto").set("margin-right", "var(--lumo-space-m)");
+        button.addClassName("dark-mode-toggle");
         return button;
     }
 

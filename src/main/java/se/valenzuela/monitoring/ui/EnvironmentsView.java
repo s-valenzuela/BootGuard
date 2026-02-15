@@ -35,7 +35,7 @@ public class EnvironmentsView extends Main {
     public EnvironmentsView(EnvironmentService environmentService) {
         this.environmentService = environmentService;
 
-        addClassNames(LumoUtility.Padding.MEDIUM, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
+        addClassNames("view-content", LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
                 LumoUtility.BoxSizing.BORDER);
         setSizeFull();
 
@@ -60,14 +60,10 @@ public class EnvironmentsView extends Main {
                 return new Span("-");
             }
             var swatch = new Span();
-            swatch.getStyle()
-                    .set("display", "inline-block")
-                    .set("width", "16px")
-                    .set("height", "16px")
-                    .set("border-radius", "4px")
-                    .set("background-color", env.getColor());
+            swatch.addClassName("color-swatch");
+            swatch.getStyle().set("background-color", env.getColor());
             var label = new Span(env.getColor());
-            label.getStyle().set("margin-left", "var(--lumo-space-xs)");
+            label.addClassNames(LumoUtility.Margin.Left.XSMALL);
             var layout = new HorizontalLayout(swatch, label);
             layout.setAlignItems(HorizontalLayout.Alignment.CENTER);
             layout.setPadding(false);

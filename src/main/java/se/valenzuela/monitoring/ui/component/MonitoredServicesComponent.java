@@ -48,9 +48,9 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         dataProvider = new ListDataProvider<>(new ArrayList<>(monitoringService.getServices()));
 
         setDataProvider(dataProvider);
-        addColumn(MonitoredService::getName).setSortable(true).setHeader("Service");
-        addColumn(MonitoredService::getVersion).setHeader("Version");
-        addColumn(MonitoredService::getUrl).setHeader("URL").setSortable(true);
+        addColumn(MonitoredService::getName).setSortable(true).setHeader("Service").setFlexGrow(1);
+        addColumn(MonitoredService::getVersion).setAutoWidth(true).setFlexGrow(0).setHeader("Version");
+        addColumn(MonitoredService::getUrl).setHeader("URL").setSortable(true).setFlexGrow(1);
 
         addComponentColumn(service -> {
             Icon icon = VaadinIcon.CIRCLE.create();
@@ -69,23 +69,17 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
                     .sorted(Comparator.comparingInt(Environment::getDisplayOrder).thenComparing(Environment::getName))
                     .forEach(env -> {
                 Span badge = new Span(env.getName());
-                badge.getStyle()
-                        .set("font-size", "var(--lumo-font-size-xs)")
-                        .set("padding", "2px 8px")
-                        .set("border-radius", "var(--lumo-border-radius-s)");
+                badge.addClassName("env-badge");
                 if (env.getColor() != null && !env.getColor().isBlank()) {
-                    badge.getStyle()
-                            .set("background-color", env.getColor())
-                            .set("color", "white");
+                    badge.addClassName("env-badge-colored");
+                    badge.getStyle().set("background-color", env.getColor());
                 } else {
-                    badge.getStyle()
-                            .set("background-color", "var(--lumo-contrast-10pct)")
-                            .set("color", "var(--lumo-body-text-color)");
+                    badge.addClassName("env-badge-default");
                 }
                 badges.add(badge);
             });
             return badges;
-        }).setHeader("Environments").setAutoWidth(true);
+        }).setHeader("Environments").setAutoWidth(true).setFlexGrow(0);
 
         addColumn(service -> {
             if (service.getLastUpdated() == null) {
@@ -96,7 +90,7 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
                     .ofPattern("yyyy-MM-dd HH:mm:ss")
                     .withLocale(UI.getCurrent().getLocale())
                     .format(service.getLastUpdated().atZone(ZoneId.systemDefault()));
-        }).setHeader("Last updated").setSortable(true);
+        }).setHeader("Last updated").setAutoWidth(true).setFlexGrow(0).setSortable(true);
         addColumn(new ComponentRenderer<>(service -> {
             Button editButton = new Button(VaadinIcon.EDIT.create(), _ -> {
                 if (editListener != null) {
@@ -108,7 +102,7 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
             actions.setSpacing(true);
             actions.setPadding(false);
             return actions;
-        })).setHeader("Actions");
+        })).setHeader("Actions").setAutoWidth(true).setFlexGrow(0);
         setPartNameGenerator(s -> !s.isInfoStatus() ? "unavailable" : null);
         setSizeFull();
         addThemeVariants(GridVariant.LUMO_ROW_STRIPES);

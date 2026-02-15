@@ -3,6 +3,7 @@ package se.valenzuela.monitoring.notification.channel;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@ConditionalOnProperty("spring.mail.host")
 public class EmailNotificationChannel implements NotificationChannel {
 
     private final JavaMailSender mailSender;

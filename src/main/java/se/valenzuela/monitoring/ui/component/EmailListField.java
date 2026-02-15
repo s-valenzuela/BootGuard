@@ -10,6 +10,7 @@ import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.theme.lumo.LumoUtility;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,14 +32,9 @@ public class EmailListField extends VerticalLayout {
         setWidthFull();
 
         var labelSpan = new Span(label);
-        labelSpan.getStyle()
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("font-weight", "500")
-                .set("color", "var(--lumo-secondary-text-color)");
+        labelSpan.addClassName("form-label");
 
-        chipContainer.getStyle()
-                .set("flex-wrap", "wrap")
-                .set("gap", "var(--lumo-space-xs)");
+        chipContainer.addClassName("chip-container");
 
         inputField.setPlaceholder("Enter email address");
         inputField.setClearButtonVisible(true);
@@ -103,25 +99,21 @@ public class EmailListField extends VerticalLayout {
 
     private HorizontalLayout createChip(String email) {
         var label = new Span(email);
-        label.getStyle().set("font-size", "var(--lumo-font-size-s)");
+        label.addClassNames(LumoUtility.FontSize.SMALL);
 
         var removeBtn = new Button(VaadinIcon.CLOSE_SMALL.create(), _ -> {
             emails.remove(email);
             refreshChips();
         });
         removeBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
-        removeBtn.getStyle().set("min-width", "0");
+        removeBtn.addClassName("email-chip-remove");
         removeBtn.getElement().setAttribute("aria-label", "Remove " + email);
 
         var chip = new HorizontalLayout(label, removeBtn);
         chip.setAlignItems(Alignment.CENTER);
         chip.setSpacing(false);
         chip.setPadding(false);
-        chip.getStyle()
-                .set("background-color", "var(--lumo-contrast-10pct)")
-                .set("border-radius", "var(--lumo-border-radius-m)")
-                .set("padding", "2px 4px 2px 8px")
-                .set("gap", "2px");
+        chip.addClassName("email-chip");
         return chip;
     }
 }

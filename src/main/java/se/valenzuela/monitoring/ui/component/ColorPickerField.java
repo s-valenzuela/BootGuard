@@ -13,13 +13,11 @@ public class ColorPickerField extends Div {
 
     public ColorPickerField(String label) {
         var labelComponent = new NativeLabel(label);
-        labelComponent.getStyle().set("font-size", "var(--lumo-font-size-s)")
-                .set("font-weight", "500")
-                .set("color", "var(--lumo-secondary-text-color)");
+        labelComponent.addClassName("form-label");
 
         colorInput.getElement().setProperty("innerHTML",
                 "<input type='color' style='width:40px;height:40px;border:none;padding:0;cursor:pointer;background:none;'>");
-        colorInput.getStyle().set("display", "inline-block");
+        colorInput.addClassName("color-picker-input");
 
         hexField.setPlaceholder("#3B82F6");
         hexField.setMaxLength(7);
@@ -46,14 +44,10 @@ public class ColorPickerField extends Div {
         });
 
         var row = new Div(colorInput, hexField);
-        row.getStyle().set("display", "flex")
-                .set("align-items", "center")
-                .set("gap", "var(--lumo-space-s)");
+        row.addClassName("color-picker-row");
 
         add(labelComponent, row);
-        getStyle().set("display", "flex")
-                .set("flex-direction", "column")
-                .set("gap", "var(--lumo-space-xs)");
+        addClassName("color-picker");
     }
 
     public String getValue() {

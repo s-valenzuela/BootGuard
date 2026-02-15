@@ -1,16 +1,13 @@
-/* Add your styles here */
+/* Grid styling */
 
-/* Allow row background to show through cells */
 vaadin-grid::part(body-cell) {
     background: transparent;
 }
 
-/* Alternating row colors (zebra striping) */
 vaadin-grid::part(even-row) {
     background: var(--lumo-contrast-5pct);
 }
 
-/* Hover effect for entire row */
 vaadin-grid::part(even-row):hover,
 vaadin-grid::part(odd-row):hover {
     background: var(--lumo-primary-color-10pct);
@@ -20,7 +17,140 @@ vaadin-grid::part(unavailable) {
     background: linear-gradient(var(--lumo-error-color-10pct), var(--lumo-error-color-10pct)) var(--lumo-base-color);
 }
 
-/* Hover on unavailable rows */
 vaadin-grid::part(unavailable):hover {
     background: linear-gradient(var(--lumo-error-color-10pct), var(--lumo-error-color-10pct)) var(--lumo-primary-color-10pct);
+}
+
+/* Layout: dark mode toggle */
+
+.dark-mode-toggle {
+    margin-left: auto;
+    margin-right: var(--lumo-space-m);
+}
+
+/* Detail panel (ServicesView sidebar) */
+
+.detail-panel {
+    border-left: 1px solid var(--lumo-contrast-10pct);
+}
+
+/* Reusable form label (used in ServicesView, ColorPickerField, EmailListField) */
+
+.form-label {
+    font-weight: 500;
+    color: var(--lumo-secondary-text-color);
+}
+
+/* Environment badges (MonitoredServicesComponent) */
+
+.env-badge {
+    font-size: var(--lumo-font-size-xs);
+    padding: 2px 8px;
+    border-radius: var(--lumo-border-radius-s);
+}
+
+.env-badge-default {
+    background-color: var(--lumo-contrast-10pct);
+    color: var(--lumo-body-text-color);
+}
+
+.env-badge-colored {
+    color: white;
+}
+
+/* Notification channel card */
+
+.channel-card {
+    background-color: var(--lumo-contrast-5pct);
+    border-radius: var(--lumo-border-radius-l);
+    padding: var(--lumo-space-m);
+    gap: var(--lumo-space-xs);
+}
+
+.channel-card-title {
+    font-weight: 600;
+    font-size: var(--lumo-font-size-l);
+}
+
+.channel-card-form {
+    gap: var(--lumo-space-xs);
+}
+
+/* Override state badges */
+
+.override-state--enabled {
+    color: var(--lumo-success-color);
+}
+
+.override-state--disabled {
+    color: var(--lumo-error-color);
+}
+
+.override-state--inherit {
+    color: var(--lumo-secondary-text-color);
+}
+
+/* Dialog scrollable content */
+
+.dialog-scroll-content {
+    overflow-y: auto;
+    max-height: 70vh;
+}
+
+/* Scrollable page */
+
+.scrollable-page {
+    overflow-y: auto;
+}
+
+/* View content spacing — generous horizontal inset */
+
+.view-content {
+    /* padding: var(--lumo-space-l) var(--lumo-space-xl) var(--lumo-space-l) var(--lumo-space-xxl, 0rem); */
+    overflow-x: hidden;
+}
+
+/* Color picker field */
+
+.color-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lumo-space-xs);
+}
+
+.color-picker-row {
+    display: flex;
+    align-items: center;
+    gap: var(--lumo-space-s);
+}
+
+.color-picker-input {
+    display: inline-block;
+}
+
+/* Email list field */
+
+.chip-container {
+    flex-wrap: wrap;
+    gap: var(--lumo-space-xs);
+}
+
+.email-chip {
+    background-color: var(--lumo-contrast-10pct);
+    border-radius: var(--lumo-border-radius-m);
+    padding: 2px 4px 2px 8px;
+    gap: 2px;
+}
+
+.email-chip-remove {
+    min-width: 0;
+}
+
+/* Color swatch (EnvironmentsView) */
+
+.color-swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
 }
