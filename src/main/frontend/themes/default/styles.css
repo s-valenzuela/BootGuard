@@ -21,6 +21,14 @@ vaadin-grid::part(unavailable):hover {
     background: linear-gradient(var(--lumo-error-color-10pct), var(--lumo-error-color-10pct)) var(--lumo-primary-color-10pct);
 }
 
+vaadin-grid::part(cert-expiring) {
+    background: linear-gradient(hsla(45, 100%, 50%, 0.1), hsla(45, 100%, 50%, 0.1)) var(--lumo-base-color);
+}
+
+vaadin-grid::part(cert-expiring):hover {
+    background: linear-gradient(hsla(45, 100%, 50%, 0.1), hsla(45, 100%, 50%, 0.1)) var(--lumo-primary-color-10pct);
+}
+
 /* Layout: dark mode toggle */
 
 .dark-mode-toggle {

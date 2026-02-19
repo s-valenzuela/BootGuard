@@ -1,0 +1,17 @@
+spring:
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: classpath:cert.pem
+            private-key: classpath:key.pem
+          truststore:
+            certificate: classpath:cert.pem
+  datasource:
+    url: jdbc:mariadb://localhost:3306/bootguard
+    username: bootguard
+    password: bootguard
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}

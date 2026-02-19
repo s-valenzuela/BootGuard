@@ -1,6 +1,19 @@
+server:
+  port: 8443
+  ssl:
+    bundle: server
 spring:
   application:
     name: bootguard
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: classpath:cert.pem
+            private-key: classpath:key.pem
+          truststore:
+            certificate: classpath:cert.pem
   threads:
     virtual:
       enabled: true
@@ -17,17 +30,46 @@ spring:
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:1025}
-#    username: ${SMTP_USERNAME:}
-#    password: ${SMTP_PASSWORD:}
+    #    username: ${SMTP_USERNAME:}
+    #    password: ${SMTP_PASSWORD:}
     properties:
       mail:
         smtp:
-#          auth: true
+          #          auth: true
           starttls:
             enable: true
+info:
+  name: '@project.name@'
+  description: '@project.description@'
+  version: '@project.version@'
 vaadin:
   launch-browser: true
 bootguard:
   health-check:
     interval: 30000
     initial-delay: 10000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: false
+  info:
+    env:
+      enabled: true
+    ssl:
+      enabled: true
+  health:
+    defaults:
+      enabled: false
+    db:
+      enabled: true
+    mail:
+      enabled: true
+    ssl:
+      enabled: true

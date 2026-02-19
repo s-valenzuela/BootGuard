@@ -46,11 +46,14 @@ class MonitoringServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private AppSettingService appSettingService;
+
     private MonitoringService monitoringService;
 
     @BeforeEach
     void setUp() {
-        monitoringService = new MonitoringService(restClient, repository, eventPublisher);
+        monitoringService = new MonitoringService(restClient, repository, eventPublisher, appSettingService);
     }
 
     @SuppressWarnings("unchecked")
@@ -151,7 +154,7 @@ class MonitoringServiceTest {
         when(repository.findAll()).thenReturn(List.of(service));
 
         var info = new InfoEndpointResponse("test-app", "A test app", "1.0.0");
-        var health = new HealthEndpointResponse("UP");
+        var health = new HealthEndpointResponse("UP", null);
         when(responseSpec.body(InfoEndpointResponse.class)).thenReturn(info);
         when(responseSpec.body(HealthEndpointResponse.class)).thenReturn(health);
 

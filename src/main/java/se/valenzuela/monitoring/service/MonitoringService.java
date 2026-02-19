@@ -11,9 +11,12 @@ import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
 import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
+import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,13 +29,15 @@ public class MonitoringService {
     private final RestClient restClient;
     private final MonitoredServiceRepository repository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AppSettingService appSettingService;
     private final CopyOnWriteArrayList<Consumer<MonitoredService>> listeners = new CopyOnWriteArrayList<>();
 
     public MonitoringService(RestClient restClient, MonitoredServiceRepository repository,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher, AppSettingService appSettingService) {
         this.restClient = restClient;
         this.repository = repository;
         this.eventPublisher = eventPublisher;
+        this.appSettingService = appSettingService;
     }
 
     public boolean addService(String url) {
@@ -106,6 +111,9 @@ public class MonitoringService {
                     .body(HealthEndpointResponse.class);
             service.setHealthResponseStatus(health != null ? health.status() : null);
             service.setHealthStatus(health != null && "UP".equalsIgnoreCase(health.status()));
+            if (health != null) {
+                extractCertificateExpiry(service, health);
+            }
         } catch (Exception e) {
             service.setHealthStatus(false);
             service.setHealthResponseStatus("DOWN");
@@ -128,5 +136,43 @@ public class MonitoringService {
                 new ServiceRemovedEvent(service, Instant.now())));
         repository.delete(service);
         listeners.forEach(listener -> listener.accept(service));
+    }
+
+    private void extractCertificateExpiry(MonitoredService service, HealthEndpointResponse health) {
+        Map<String, JsonNode> components = health.components();
+        if (components == null) {
+            return;
+        }
+        JsonNode sslNode = components.get("ssl");
+        if (sslNode == null || !sslNode.has("details")) {
+            return;
+        }
+        Instant earliest = null;
+        JsonNode details = sslNode.get("details");
+        for (JsonNode bundle : details) {
+            JsonNode certChain = bundle.get("certificateChain");
+            if (certChain == null) {
+                continue;
+            }
+            for (JsonNode aliasEntry : certChain) {
+                for (JsonNode cert : aliasEntry) {
+                    JsonNode validityEnds = cert.get("validityEnds");
+                    if (validityEnds != null && validityEnds.isTextual()) {
+                        try {
+                            Instant expiry = Instant.parse(validityEnds.asString());
+                            if (earliest == null || expiry.isBefore(earliest)) {
+                                earliest = expiry;
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+        }
+        if (earliest != null) {
+            service.setEarliestCertExpiry(earliest);
+            int warningDays = appSettingService.getCertExpiryWarningDays();
+            service.setCertExpiringSoon(earliest.isBefore(Instant.now().plus(warningDays, ChronoUnit.DAYS)));
+        }
     }
 }

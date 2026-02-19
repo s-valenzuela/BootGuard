@@ -38,6 +38,12 @@ public class MonitoredService {
     @Transient
     private String healthResponseStatus;
 
+    @Transient
+    private Instant earliestCertExpiry;
+
+    @Transient
+    private boolean certExpiringSoon;
+
     @Column(nullable = false)
     private String infoEndpoint;
 

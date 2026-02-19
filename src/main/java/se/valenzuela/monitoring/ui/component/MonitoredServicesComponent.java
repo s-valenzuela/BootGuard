@@ -103,7 +103,11 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
             actions.setPadding(false);
             return actions;
         })).setHeader("Actions").setAutoWidth(true).setFlexGrow(0);
-        setPartNameGenerator(s -> !s.isInfoStatus() ? "unavailable" : null);
+        setPartNameGenerator(s -> {
+            if (!s.isInfoStatus()) return "unavailable";
+            if (s.isCertExpiringSoon()) return "cert-expiring";
+            return null;
+        });
         setSizeFull();
         addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
 
