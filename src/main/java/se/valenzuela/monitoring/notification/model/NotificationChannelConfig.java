@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.notification.config;
+package se.valenzuela.monitoring.notification.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

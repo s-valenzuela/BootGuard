@@ -1,7 +1,7 @@
-package se.valenzuela.monitoring.model;
+package se.valenzuela.monitoring.core.model;
 
 import org.junit.jupiter.api.Test;
-import se.valenzuela.monitoring.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
 
 import static org.junit.jupiter.api.Assertions.*;
 

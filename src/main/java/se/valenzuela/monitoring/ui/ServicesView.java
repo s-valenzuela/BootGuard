@@ -12,10 +12,10 @@ import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.model.MonitoredService;
-import se.valenzuela.monitoring.service.EnvironmentService;
-import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.core.service.EnvironmentService;
+import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.MonitoredServicesComponent;
 
 import java.time.ZoneId;

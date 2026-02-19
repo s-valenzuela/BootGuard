@@ -5,7 +5,7 @@ import tools.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.*;
 
 import java.util.LinkedHashMap;

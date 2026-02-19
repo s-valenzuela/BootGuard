@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.client;
+package se.valenzuela.monitoring.core.client;
 
 public record InfoEndpointResponse(String name, String description, String version) {
 

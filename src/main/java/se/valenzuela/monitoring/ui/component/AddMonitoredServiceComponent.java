@@ -12,10 +12,10 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.spring.annotation.UIScope;
 import lombok.Getter;
 import org.springframework.stereotype.Component;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.model.MonitoredService;
-import se.valenzuela.monitoring.service.EnvironmentService;
-import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.core.service.EnvironmentService;
+import se.valenzuela.monitoring.core.service.MonitoringService;
 
 import java.net.URI;
 import java.net.URISyntaxException;

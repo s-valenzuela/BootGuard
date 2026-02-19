@@ -1,9 +1,9 @@
-package se.valenzuela.monitoring.model;
+package se.valenzuela.monitoring.core.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import se.valenzuela.monitoring.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
 
 import java.time.Instant;
 import java.util.HashSet;

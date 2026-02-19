@@ -1,8 +1,8 @@
 package se.valenzuela.monitoring.notification.service;
 
 import org.springframework.stereotype.Service;
-import se.valenzuela.monitoring.notification.config.NotificationChannelConfig;
-import se.valenzuela.monitoring.notification.config.NotificationServiceOverride;
+import se.valenzuela.monitoring.notification.model.NotificationChannelConfig;
+import se.valenzuela.monitoring.notification.model.NotificationServiceOverride;
 import se.valenzuela.monitoring.notification.repository.NotificationChannelConfigRepository;
 import se.valenzuela.monitoring.notification.repository.NotificationServiceOverrideRepository;
 

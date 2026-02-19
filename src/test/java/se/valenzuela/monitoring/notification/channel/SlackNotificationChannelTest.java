@@ -8,7 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClient;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
 

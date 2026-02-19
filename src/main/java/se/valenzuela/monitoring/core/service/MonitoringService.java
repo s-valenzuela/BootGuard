@@ -1,16 +1,17 @@
-package se.valenzuela.monitoring.service;
+package se.valenzuela.monitoring.core.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import se.valenzuela.monitoring.client.HealthEndpointResponse;
-import se.valenzuela.monitoring.client.InfoEndpointResponse;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.client.HealthEndpointResponse;
+import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
-import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.settings.service.AppSettingService;
 import tools.jackson.databind.JsonNode;
 
 import java.time.Instant;

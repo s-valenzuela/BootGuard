@@ -1,7 +1,7 @@
 package se.valenzuela.monitoring.notification.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import se.valenzuela.monitoring.notification.config.NotificationChannelConfig;
+import se.valenzuela.monitoring.notification.model.NotificationChannelConfig;
 
 import java.util.Optional;
 

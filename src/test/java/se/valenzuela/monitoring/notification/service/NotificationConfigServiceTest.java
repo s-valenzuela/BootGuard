@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.valenzuela.monitoring.model.MonitoredService;
-import se.valenzuela.monitoring.notification.config.NotificationChannelConfig;
-import se.valenzuela.monitoring.notification.config.NotificationServiceOverride;
+import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.notification.model.NotificationChannelConfig;
+import se.valenzuela.monitoring.notification.model.NotificationServiceOverride;
 import se.valenzuela.monitoring.notification.repository.NotificationChannelConfigRepository;
 import se.valenzuela.monitoring.notification.repository.NotificationServiceOverrideRepository;
 

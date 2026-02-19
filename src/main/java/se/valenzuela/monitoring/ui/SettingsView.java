@@ -11,7 +11,7 @@ import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import se.valenzuela.monitoring.service.AppSettingService;
+import se.valenzuela.monitoring.settings.service.AppSettingService;
 import se.valenzuela.monitoring.ui.component.ViewToolbar;
 
 @Route("settings")

@@ -1,8 +1,8 @@
-package se.valenzuela.monitoring.service;
+package se.valenzuela.monitoring.settings.service;
 
 import org.springframework.stereotype.Service;
-import se.valenzuela.monitoring.model.AppSetting;
-import se.valenzuela.monitoring.repository.AppSettingRepository;
+import se.valenzuela.monitoring.settings.model.AppSetting;
+import se.valenzuela.monitoring.settings.repository.AppSettingRepository;
 
 @Service
 public class AppSettingService {

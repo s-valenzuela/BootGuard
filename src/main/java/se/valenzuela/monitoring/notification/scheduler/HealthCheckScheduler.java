@@ -4,10 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
-import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.core.service.MonitoringService;
 
 import java.time.Instant;
 import java.util.List;

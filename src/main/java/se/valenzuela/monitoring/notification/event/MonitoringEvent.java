@@ -1,6 +1,6 @@
 package se.valenzuela.monitoring.notification.event;
 
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 
 import java.time.Instant;
 

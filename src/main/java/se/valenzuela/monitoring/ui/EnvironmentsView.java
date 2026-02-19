@@ -19,8 +19,8 @@ import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.service.EnvironmentService;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.service.EnvironmentService;
 import se.valenzuela.monitoring.ui.component.ViewToolbar;
 
 import java.util.ArrayList;

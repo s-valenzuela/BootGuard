@@ -8,9 +8,9 @@ import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.spring.annotation.UIScope;
 import com.vaadin.flow.theme.lumo.LumoUtility;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.service.EnvironmentService;
-import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.service.EnvironmentService;
+import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.AddMonitoredServiceComponent;
 import se.valenzuela.monitoring.ui.component.ViewToolbar;
 

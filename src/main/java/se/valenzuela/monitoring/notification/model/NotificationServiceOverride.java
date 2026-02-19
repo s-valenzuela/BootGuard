@@ -1,9 +1,9 @@
-package se.valenzuela.monitoring.notification.config;
+package se.valenzuela.monitoring.notification.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 
 import java.time.Instant;
 

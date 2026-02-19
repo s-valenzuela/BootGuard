@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.client;
+package se.valenzuela.monitoring.core.client;
 
 import tools.jackson.databind.JsonNode;
 

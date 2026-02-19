@@ -7,10 +7,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
-import se.valenzuela.monitoring.service.MonitoringService;
+import se.valenzuela.monitoring.core.service.MonitoringService;
 
 import java.util.List;
 

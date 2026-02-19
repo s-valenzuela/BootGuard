@@ -1,14 +1,14 @@
-package se.valenzuela.monitoring.service;
+package se.valenzuela.monitoring.core.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.model.MonitoredService;
-import se.valenzuela.monitoring.repository.EnvironmentRepository;
-import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.core.repository.EnvironmentRepository;
+import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 
 import java.util.HashSet;
 import java.util.List;

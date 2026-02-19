@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.model;
+package se.valenzuela.monitoring.settings.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

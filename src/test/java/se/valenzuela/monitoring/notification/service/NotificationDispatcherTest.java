@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.channel.NotificationChannel;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;

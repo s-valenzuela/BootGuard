@@ -1,11 +1,11 @@
-package se.valenzuela.monitoring.service;
+package se.valenzuela.monitoring.core.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import se.valenzuela.monitoring.model.Environment;
-import se.valenzuela.monitoring.model.MonitoredService;
-import se.valenzuela.monitoring.repository.EnvironmentRepository;
-import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.core.model.Environment;
+import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.core.repository.EnvironmentRepository;
+import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 
 import java.util.HashSet;
 import java.util.List;

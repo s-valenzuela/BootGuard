@@ -1,8 +1,8 @@
-package se.valenzuela.monitoring.repository;
+package se.valenzuela.monitoring.core.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 
 import java.util.Optional;
 

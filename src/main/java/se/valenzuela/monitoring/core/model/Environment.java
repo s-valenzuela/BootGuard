@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.model;
+package se.valenzuela.monitoring.core.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;

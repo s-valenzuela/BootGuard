@@ -1,7 +1,7 @@
-package se.valenzuela.monitoring.repository;
+package se.valenzuela.monitoring.core.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import se.valenzuela.monitoring.model.Environment;
+import se.valenzuela.monitoring.core.model.Environment;
 
 import java.util.List;
 import java.util.Optional;

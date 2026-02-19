@@ -1,4 +1,4 @@
-package se.valenzuela.monitoring.service;
+package se.valenzuela.monitoring.core.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,13 +8,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.client.RestClient;
-import se.valenzuela.monitoring.client.HealthEndpointResponse;
-import se.valenzuela.monitoring.client.InfoEndpointResponse;
-import se.valenzuela.monitoring.model.MonitoredService;
+import se.valenzuela.monitoring.core.client.HealthEndpointResponse;
+import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
-import se.valenzuela.monitoring.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
+import se.valenzuela.monitoring.settings.service.AppSettingService;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
