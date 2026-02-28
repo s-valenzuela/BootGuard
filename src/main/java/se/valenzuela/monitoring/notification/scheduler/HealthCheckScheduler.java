@@ -9,6 +9,7 @@ import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
 import se.valenzuela.monitoring.core.service.MonitoringService;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +23,7 @@ public class HealthCheckScheduler {
     private final MonitoringService monitoringService;
     private final ApplicationEventPublisher eventPublisher;
     private final ConcurrentHashMap<Long, Boolean> previousHealthStates = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, Instant> lastCheckedTimes = new ConcurrentHashMap<>();
 
     public HealthCheckScheduler(MonitoringService monitoringService,
                                 ApplicationEventPublisher eventPublisher) {
@@ -29,19 +31,26 @@ public class HealthCheckScheduler {
         this.eventPublisher = eventPublisher;
     }
 
-    @Scheduled(fixedDelayString = "${bootguard.health-check.interval:30000}",
+    @Scheduled(fixedDelayString = "${bootguard.health-check.tick-interval:5000}",
             initialDelayString = "${bootguard.health-check.initial-delay:10000}")
     public void checkHealth() {
-        List<MonitoredService> services = monitoringService.getServices();
+        Instant now = Instant.now();
+        List<MonitoredService> allServices = monitoringService.getServicesWithEnvironments();
 
-        Set<Long> currentServiceIds = services.stream()
+        List<MonitoredService> dueServices = allServices.stream()
+                .filter(service -> service.getId() != null && isDue(service, now))
+                .toList();
+
+        if (!dueServices.isEmpty()) {
+            monitoringService.fetchHealthStatuses(dueServices);
+        }
+
+        Set<Long> currentServiceIds = allServices.stream()
                 .map(MonitoredService::getId)
                 .collect(Collectors.toSet());
 
-        for (MonitoredService service : services) {
-            if (service.getId() == null) {
-                continue;
-            }
+        for (MonitoredService service : dueServices) {
+            lastCheckedTimes.put(service.getId(), now);
 
             boolean currentlyHealthy = service.isHealthStatus();
             Boolean previouslyHealthy = previousHealthStates.put(service.getId(), currentlyHealthy);
@@ -64,5 +73,15 @@ public class HealthCheckScheduler {
         }
 
         previousHealthStates.keySet().retainAll(currentServiceIds);
+        lastCheckedTimes.keySet().retainAll(currentServiceIds);
+    }
+
+    private boolean isDue(MonitoredService service, Instant now) {
+        Instant lastChecked = lastCheckedTimes.get(service.getId());
+        if (lastChecked == null) {
+            return true;
+        }
+        long intervalSeconds = service.getEffectiveHealthCheckIntervalSeconds();
+        return Duration.between(lastChecked, now).getSeconds() >= intervalSeconds;
     }
 }

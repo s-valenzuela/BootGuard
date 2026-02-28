@@ -25,6 +25,9 @@ public class Environment {
     @Column(name = "display_order", nullable = false)
     private int displayOrder;
 
+    @Column(name = "health_check_interval_seconds")
+    private Integer healthCheckIntervalSeconds;
+
     protected Environment() {
     }
 

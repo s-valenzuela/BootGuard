@@ -74,6 +74,11 @@ public class EnvironmentsView extends Main {
         g.addColumn(Environment::getDisplayOrder).setHeader("Display Order").setSortable(true).setFlexGrow(0).setWidth("140px").setKey("displayOrder");
         g.sort(GridSortOrder.asc(g.getColumnByKey("displayOrder")).build());
 
+        g.addColumn(env -> {
+            Integer interval = env.getHealthCheckIntervalSeconds();
+            return interval != null ? interval + "s" : "default (30s)";
+        }).setHeader("Check Interval").setFlexGrow(0).setWidth("150px");
+
         g.addColumn(new ComponentRenderer<>(env -> {
             var editButton = new Button(VaadinIcon.EDIT.create(), _ -> openDialog(env));
             editButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
@@ -105,13 +110,22 @@ public class EnvironmentsView extends Main {
         orderField.setStepButtonsVisible(true);
         orderField.setWidthFull();
 
+        var intervalField = new IntegerField("Health Check Interval (seconds)");
+        intervalField.setMin(5);
+        intervalField.setMax(3600);
+        intervalField.setStepButtonsVisible(true);
+        intervalField.setClearButtonVisible(true);
+        intervalField.setHelperText("Leave empty to use default (30s)");
+        intervalField.setWidthFull();
+
         if (existing != null) {
             nameField.setValue(existing.getName());
             colorField.setValue(existing.getColor());
             orderField.setValue(existing.getDisplayOrder());
+            intervalField.setValue(existing.getHealthCheckIntervalSeconds());
         }
 
-        var content = new VerticalLayout(nameField, colorField, orderField);
+        var content = new VerticalLayout(nameField, colorField, orderField, intervalField);
         content.setPadding(false);
         content.setSpacing(true);
         dialog.add(content);
@@ -139,12 +153,19 @@ public class EnvironmentsView extends Main {
             String color = colorField.getValue() != null ? colorField.getValue().trim() : "";
             int order = orderField.getValue() != null ? orderField.getValue() : 0;
 
+            Integer interval = intervalField.getValue();
+
             if (existing == null) {
-                environmentService.createEnvironment(name, color.isEmpty() ? null : color, order);
+                Environment env = environmentService.createEnvironment(name, color.isEmpty() ? null : color, order);
+                env.setHealthCheckIntervalSeconds(interval);
+                if (interval != null) {
+                    environmentService.updateEnvironment(env);
+                }
             } else {
                 existing.setName(name);
                 existing.setColor(color.isEmpty() ? null : color);
                 existing.setDisplayOrder(order);
+                existing.setHealthCheckIntervalSeconds(interval);
                 environmentService.updateEnvironment(existing);
             }
 

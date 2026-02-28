@@ -90,6 +90,22 @@ public class MonitoringService {
         return services;
     }
 
+    public List<MonitoredService> getServicesWithEnvironments() {
+        return repository.findAllWithEnvironments();
+    }
+
+    public void fetchHealthStatuses(List<MonitoredService> services) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (MonitoredService service : services) {
+                executor.submit(() -> fetchStatus(service));
+            }
+        }
+    }
+
+    public MonitoredService saveService(MonitoredService service) {
+        return repository.save(service);
+    }
+
     private void fetchStatus(MonitoredService service) {
         String baseUrl = service.getUrl();
         try {

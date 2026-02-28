@@ -36,7 +36,6 @@ class HealthCheckSchedulerTest {
     private MonitoredService createService(Long id, String name, boolean healthy) {
         var service = new MonitoredService("http://localhost:808" + id);
         service.setName(name);
-        // Use reflection-free approach: set id via setter (Lombok @Setter)
         service.setId(id);
         service.setHealthStatus(healthy);
         return service;
@@ -45,7 +44,7 @@ class HealthCheckSchedulerTest {
     @Test
     void firstRun_recordsStateButNoEvent() {
         var service = createService(1L, "app", true);
-        when(monitoringService.getServices()).thenReturn(List.of(service));
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service));
 
         scheduler.checkHealth();
 
@@ -55,22 +54,29 @@ class HealthCheckSchedulerTest {
     @Test
     void stableState_noEvent() {
         var service = createService(1L, "app", true);
-        when(monitoringService.getServices()).thenReturn(List.of(service));
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service));
 
         scheduler.checkHealth(); // first observation
-        scheduler.checkHealth(); // same state
+
+        // Second tick — service has default 30s interval, but lastChecked was just set.
+        // With a 30s interval, the service is NOT due on the immediate second tick.
+        // So no health fetch happens, no event.
+        scheduler.checkHealth();
 
         verifyNoInteractions(eventPublisher);
     }
 
     @Test
     void upToDown_publishesEvent() {
+        // Use a very short interval so the service is always due
         var serviceUp = createService(1L, "app", true);
-        when(monitoringService.getServices()).thenReturn(List.of(serviceUp));
+        serviceUp.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(serviceUp));
         scheduler.checkHealth(); // first observation
 
         var serviceDown = createService(1L, "app", false);
-        when(monitoringService.getServices()).thenReturn(List.of(serviceDown));
+        serviceDown.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(serviceDown));
         scheduler.checkHealth(); // state change
 
         ArgumentCaptor<MonitoringEventCarrier> captor = ArgumentCaptor.forClass(MonitoringEventCarrier.class);
@@ -86,11 +92,13 @@ class HealthCheckSchedulerTest {
     @Test
     void downToUp_publishesEvent() {
         var serviceDown = createService(1L, "app", false);
-        when(monitoringService.getServices()).thenReturn(List.of(serviceDown));
+        serviceDown.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(serviceDown));
         scheduler.checkHealth(); // first observation
 
         var serviceUp = createService(1L, "app", true);
-        when(monitoringService.getServices()).thenReturn(List.of(serviceUp));
+        serviceUp.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(serviceUp));
         scheduler.checkHealth(); // state change
 
         ArgumentCaptor<MonitoringEventCarrier> captor = ArgumentCaptor.forClass(MonitoringEventCarrier.class);
@@ -104,19 +112,43 @@ class HealthCheckSchedulerTest {
     @Test
     void staleEntries_cleanedUp() {
         var service1 = createService(1L, "app1", true);
+        service1.setHealthCheckIntervalSeconds(0);
         var service2 = createService(2L, "app2", true);
-        when(monitoringService.getServices()).thenReturn(List.of(service1, service2));
+        service2.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service1, service2));
         scheduler.checkHealth(); // record both
 
         // service2 removed
-        when(monitoringService.getServices()).thenReturn(List.of(service1));
+        service1 = createService(1L, "app1", true);
+        service1.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service1));
         scheduler.checkHealth();
 
         // Now re-add service2 — should be treated as first observation (no event)
+        service1 = createService(1L, "app1", true);
+        service1.setHealthCheckIntervalSeconds(0);
         var service2Again = createService(2L, "app2", false);
-        when(monitoringService.getServices()).thenReturn(List.of(service1, service2Again));
+        service2Again.setHealthCheckIntervalSeconds(0);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service1, service2Again));
         scheduler.checkHealth();
 
         verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void serviceNotDue_isNotChecked() {
+        // Service with 3600s interval — after first check, it should not be due again immediately
+        var service = createService(1L, "app", true);
+        service.setHealthCheckIntervalSeconds(3600);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service));
+
+        scheduler.checkHealth(); // first run — always due
+        verify(monitoringService).fetchHealthStatuses(anyList());
+
+        reset(monitoringService);
+        when(monitoringService.getServicesWithEnvironments()).thenReturn(List.of(service));
+
+        scheduler.checkHealth(); // second run — not due (3600s hasn't passed)
+        verify(monitoringService, never()).fetchHealthStatuses(anyList());
     }
 }

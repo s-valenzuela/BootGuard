@@ -7,6 +7,7 @@ import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Getter
@@ -50,6 +51,9 @@ public class MonitoredService {
     @Column(nullable = false)
     private String healthEndpoint;
 
+    @Column(name = "health_check_interval_seconds")
+    private Integer healthCheckIntervalSeconds;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "service_environment",
             joinColumns = @JoinColumn(name = "service_id"),
@@ -70,5 +74,16 @@ public class MonitoredService {
         this.name = info.name();
         this.version = info.version();
         this.lastUpdated = Instant.now();
+    }
+
+    public int getEffectiveHealthCheckIntervalSeconds() {
+        if (healthCheckIntervalSeconds != null) {
+            return healthCheckIntervalSeconds;
+        }
+        return environments.stream()
+                .map(Environment::getHealthCheckIntervalSeconds)
+                .filter(Objects::nonNull)
+                .min(Integer::compareTo)
+                .orElse(30);
     }
 }

@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import se.valenzuela.monitoring.core.model.MonitoredService;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface MonitoredServiceRepository extends JpaRepository<MonitoredService, Long> {
@@ -14,4 +15,7 @@ public interface MonitoredServiceRepository extends JpaRepository<MonitoredServi
 
     @Query("SELECT s FROM MonitoredService s LEFT JOIN FETCH s.environments WHERE s.id = :id")
     Optional<MonitoredService> findByIdWithEnvironments(Long id);
+
+    @Query("SELECT DISTINCT s FROM MonitoredService s LEFT JOIN FETCH s.environments")
+    List<MonitoredService> findAllWithEnvironments();
 }

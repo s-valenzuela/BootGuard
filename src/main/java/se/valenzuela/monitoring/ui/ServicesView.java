@@ -11,6 +11,7 @@ import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
 import se.valenzuela.monitoring.core.model.Environment;
 import se.valenzuela.monitoring.core.model.MonitoredService;
@@ -21,6 +22,7 @@ import se.valenzuela.monitoring.ui.component.MonitoredServicesComponent;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 public class ServicesView extends HorizontalLayout {
@@ -32,6 +34,7 @@ public class ServicesView extends HorizontalLayout {
     private TextField urlField;
     private TextField infoEndpointField;
     private TextField healthEndpointField;
+    private IntegerField checkIntervalField;
     private CheckboxGroup<Environment> environmentCheckboxGroup;
     private Button saveButton;
 
@@ -85,6 +88,7 @@ public class ServicesView extends HorizontalLayout {
         String originalUrl = service.getUrl() != null ? service.getUrl() : "";
         String originalInfoEndpoint = service.getInfoEndpoint() != null ? service.getInfoEndpoint() : "";
         String originalHealthEndpoint = service.getHealthEndpoint() != null ? service.getHealthEndpoint() : "";
+        Integer originalInterval = service.getHealthCheckIntervalSeconds();
 
         FormLayout form = new FormLayout();
         form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
@@ -129,6 +133,16 @@ public class ServicesView extends HorizontalLayout {
         environmentCheckboxGroup.setReadOnly(!editMode);
         environmentCheckboxGroup.setWidthFull();
 
+        checkIntervalField = new IntegerField("Health Check Interval (seconds)");
+        checkIntervalField.setMin(5);
+        checkIntervalField.setMax(3600);
+        checkIntervalField.setStepButtonsVisible(true);
+        checkIntervalField.setClearButtonVisible(true);
+        checkIntervalField.setHelperText("Leave empty to use environment/default interval");
+        checkIntervalField.setValue(originalInterval);
+        checkIntervalField.setReadOnly(!editMode);
+        checkIntervalField.setWidthFull();
+
         saveButton = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
             String newUrl = urlField.getValue().trim();
             if (!newUrl.equals(originalUrl)) {
@@ -136,9 +150,11 @@ public class ServicesView extends HorizontalLayout {
             }
             service.setInfoEndpoint(infoEndpointField.getValue());
             service.setHealthEndpoint(healthEndpointField.getValue());
+            service.setHealthCheckIntervalSeconds(checkIntervalField.getValue());
             if (service.getId() != null) {
                 environmentService.updateServiceEnvironments(service, environmentCheckboxGroup.getValue());
             }
+            monitoringService.saveService(service);
             monitoringService.notifyListeners(service);
             showDetails(service, false);
         });
@@ -150,16 +166,19 @@ public class ServicesView extends HorizontalLayout {
             boolean changed = !urlField.getValue().equals(originalUrl)
                     || !infoEndpointField.getValue().equals(originalInfoEndpoint)
                     || !healthEndpointField.getValue().equals(originalHealthEndpoint)
-                    || !environmentCheckboxGroup.getValue().equals(originalEnvironments);
+                    || !environmentCheckboxGroup.getValue().equals(originalEnvironments)
+                    || !Objects.equals(checkIntervalField.getValue(), originalInterval);
             saveButton.setEnabled(changed);
         };
         urlField.addValueChangeListener(_ -> dirtyCheck.run());
         infoEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
         healthEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
         environmentCheckboxGroup.addValueChangeListener(_ -> dirtyCheck.run());
+        checkIntervalField.addValueChangeListener(_ -> dirtyCheck.run());
 
         detailPanel.add(new H3("Details"), form, new H3("Endpoints"), endpointsForm,
-                new H3("Environments"), environmentCheckboxGroup, saveButton);
+                new H3("Environments"), environmentCheckboxGroup,
+                new H3("Health Check"), checkIntervalField, saveButton);
     }
 
     private void addFormRow(FormLayout form, String label, Component value) {

@@ -39,4 +39,63 @@ class MonitoredServiceTest {
         assertEquals("my-app", service.getName());
         assertEquals("2.0.0", service.getVersion());
     }
+
+    @Test
+    void effectiveInterval_defaultsTo30WhenNoOverrides() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+
+        assertEquals(30, service.getEffectiveHealthCheckIntervalSeconds());
+    }
+
+    @Test
+    void effectiveInterval_serviceOverrideWins() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+        service.setHealthCheckIntervalSeconds(15);
+
+        Environment env = new Environment("prod", "#000", 1);
+        env.setHealthCheckIntervalSeconds(60);
+        service.getEnvironments().add(env);
+
+        assertEquals(15, service.getEffectiveHealthCheckIntervalSeconds());
+    }
+
+    @Test
+    void effectiveInterval_usesMinOfEnvironments() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+
+        Environment prod = new Environment("prod", "#000", 1);
+        prod.setHealthCheckIntervalSeconds(10);
+        Environment dev = new Environment("dev", "#fff", 2);
+        dev.setHealthCheckIntervalSeconds(60);
+        service.getEnvironments().add(prod);
+        service.getEnvironments().add(dev);
+
+        assertEquals(10, service.getEffectiveHealthCheckIntervalSeconds());
+    }
+
+    @Test
+    void effectiveInterval_ignoresNullEnvironmentIntervals() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+
+        Environment prod = new Environment("prod", "#000", 1);
+        prod.setHealthCheckIntervalSeconds(20);
+        Environment dev = new Environment("dev", "#fff", 2);
+        // dev has null interval
+        service.getEnvironments().add(prod);
+        service.getEnvironments().add(dev);
+
+        assertEquals(20, service.getEffectiveHealthCheckIntervalSeconds());
+    }
+
+    @Test
+    void effectiveInterval_allEnvironmentsNull_defaultsTo30() {
+        MonitoredService service = new MonitoredService("http://localhost:8080");
+
+        Environment prod = new Environment("prod", "#000", 1);
+        Environment dev = new Environment("dev", "#fff", 2);
+        service.getEnvironments().add(prod);
+        service.getEnvironments().add(dev);
+
+        assertEquals(30, service.getEffectiveHealthCheckIntervalSeconds());
+    }
 }
