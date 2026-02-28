@@ -41,6 +41,10 @@ Thumbs.db
 .env
 *.log
 
+### SSL certificates (generate locally — see README.md) ###
+src/main/resources/cert.pem
+src/main/resources/key.pem
+
 ### Editor swap files ###
 *.swp
 *.swo
