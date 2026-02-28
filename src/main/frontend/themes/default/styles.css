@@ -36,10 +36,165 @@ vaadin-grid::part(cert-expiring):hover {
     margin-right: var(--lumo-space-m);
 }
 
-/* Detail panel (ServicesView sidebar) */
+/* ── Service card grid ─────────────────────────────────────────────────── */
 
-.detail-panel {
-    border-left: 1px solid var(--lumo-contrast-10pct);
+.service-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--lumo-space-m);
+    padding: var(--lumo-space-m);
+    align-content: start;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+.service-card {
+    background: var(--lumo-base-color);
+    border: 1px solid var(--lumo-contrast-10pct);
+    border-radius: var(--lumo-border-radius-l);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+
+.service-card:hover {
+    box-shadow: var(--lumo-box-shadow-s);
+}
+
+.service-card--down    { border-left: 3px solid var(--lumo-error-color); }
+.service-card--warning { border-left: 3px solid goldenrod; }
+.service-card--healthy { border-left: 3px solid var(--lumo-success-color); }
+
+.service-card-body {
+    padding: var(--lumo-space-m);
+    cursor: pointer;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lumo-space-xs);
+    transition: background 0.1s;
+}
+
+.service-card-body:hover {
+    background: var(--lumo-contrast-5pct);
+}
+
+.service-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--lumo-space-s);
+}
+
+.service-card-name {
+    font-weight: 600;
+    font-size: var(--lumo-font-size-m);
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.service-card-version {
+    font-size: var(--lumo-font-size-xs);
+    color: var(--lumo-secondary-text-color);
+    white-space: nowrap;
+}
+
+.service-card-url {
+    font-size: var(--lumo-font-size-xs);
+    color: var(--lumo-primary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    text-decoration: none;
+}
+
+.service-card-url:hover {
+    text-decoration: underline;
+}
+
+.service-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lumo-space-xs);
+    min-height: 20px;
+}
+
+.service-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--lumo-space-xs);
+}
+
+.service-card-cert {
+    font-size: var(--lumo-font-size-xs);
+    color: var(--lumo-secondary-text-color);
+}
+
+.service-card-cert--warning {
+    color: goldenrod;
+    font-weight: 600;
+}
+
+.service-card-time {
+    font-size: var(--lumo-font-size-xs);
+    color: var(--lumo-tertiary-text-color);
+    margin-left: auto;
+}
+
+.service-card-actions {
+    padding: var(--lumo-space-xs) var(--lumo-space-s);
+    border-top: 1px solid var(--lumo-contrast-5pct);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ── Summary bar ───────────────────────────────────────────────────────── */
+
+.summary-bar {
+    padding: var(--lumo-space-s) var(--lumo-space-m);
+    border-bottom: 1px solid var(--lumo-contrast-5pct);
+    flex-shrink: 0;
+}
+
+.summary-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lumo-space-xs);
+    font-size: var(--lumo-font-size-s);
+    font-weight: 500;
+}
+
+/* ── Detail dialog ─────────────────────────────────────────────────────── */
+
+.detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lumo-space-xs);
+}
+
+.detail-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: var(--lumo-space-s);
+    align-items: baseline;
+    font-size: var(--lumo-font-size-s);
+}
+
+.detail-label {
+    font-weight: 500;
+    color: var(--lumo-secondary-text-color);
+    font-size: var(--lumo-font-size-s);
+}
+
+.detail-env-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--lumo-space-xs);
+    margin-top: var(--lumo-space-xs);
 }
 
 /* Reusable form label (used in ServicesView, ColorPickerField, EmailListField) */

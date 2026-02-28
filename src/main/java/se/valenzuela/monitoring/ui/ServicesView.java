@@ -1,14 +1,19 @@
 package se.valenzuela.monitoring.ui;
 
-import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
-import com.vaadin.flow.component.formlayout.FormLayout;
-import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
+import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.html.Anchor;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.Hr;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.IntegerField;
@@ -17,210 +22,440 @@ import se.valenzuela.monitoring.core.model.Environment;
 import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.core.service.EnvironmentService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
-import se.valenzuela.monitoring.ui.component.MonitoredServicesComponent;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
-public class ServicesView extends HorizontalLayout {
+public class ServicesView extends VerticalLayout {
 
-    private final VerticalLayout detailPanel = new VerticalLayout();
+    private static final DateTimeFormatter DATE_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
+    private static final DateTimeFormatter DATETIME_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+
     private final MonitoringService monitoringService;
     private final EnvironmentService environmentService;
-    private final MonitoredServicesComponent monitoredServicesComponent;
-    private TextField urlField;
-    private TextField infoEndpointField;
-    private TextField healthEndpointField;
-    private IntegerField checkIntervalField;
-    private CheckboxGroup<Environment> environmentCheckboxGroup;
-    private Button saveButton;
+
+    private Set<Environment> environmentFilter = Set.of();
+    private List<MonitoredService> currentServices = new ArrayList<>();
+
+    private final HorizontalLayout summaryBar = new HorizontalLayout();
+    private final Div cardGrid = new Div();
 
     public ServicesView(MonitoringService monitoringService, EnvironmentService environmentService) {
         this.monitoringService = monitoringService;
         this.environmentService = environmentService;
+
+        setPadding(false);
+        setSpacing(false);
         setSizeFull();
 
-        monitoredServicesComponent = new MonitoredServicesComponent(monitoringService, environmentService);
+        summaryBar.addClassName("summary-bar");
+        summaryBar.setSpacing(true);
+        summaryBar.setPadding(false);
 
-        configureDetailPanel();
+        cardGrid.addClassName("service-card-grid");
 
-        add(monitoredServicesComponent, detailPanel);
+        add(summaryBar);
+        addAndExpand(cardGrid);
 
-        setFlexGrow(2, monitoredServicesComponent);
-        setFlexGrow(1, detailPanel);
+        currentServices = monitoringService.getServicesForDisplay();
+        renderAll(currentServices);
 
-        monitoredServicesComponent.asSingleSelect().addValueChangeListener(e -> {
-            MonitoredService service = e.getValue();
-            showDetails(service, false);
-        });
-
-        monitoredServicesComponent.setEditListener(service -> {
-            monitoredServicesComponent.asSingleSelect().setValue(service);
-            showDetails(service, true);
-        });
+        UI ui = UI.getCurrent();
+        Consumer<MonitoredService> listener = _ -> {
+            if (ui != null && ui.isAttached()) {
+                List<MonitoredService> fresh = monitoringService.getServicesForDisplay();
+                ui.access(() -> {
+                    currentServices = fresh;
+                    renderAll(currentServices);
+                });
+            }
+        };
+        monitoringService.addListener(listener);
+        addDetachListener(_ -> monitoringService.removeListener(listener));
     }
 
-    private void configureDetailPanel() {
-        detailPanel.setWidth("500px");
-        detailPanel.setPadding(true);
-        detailPanel.addClassName("detail-panel");
-        detailPanel.setVisible(false); // hidden until selection
+    public void setEnvironmentFilter(Set<Environment> filter) {
+        environmentFilter = filter != null ? filter : Set.of();
+        renderAll(currentServices);
     }
 
-    private void showDetails(MonitoredService service, boolean editMode) {
-        detailPanel.removeAll();
+    // ── rendering ─────────────────────────────────────────────────────────────
 
-        if (service == null) {
-            detailPanel.setVisible(false);
-            return;
+    private void renderAll(List<MonitoredService> all) {
+        List<MonitoredService> visible = applyFilter(all);
+        renderSummaryBar(visible);
+        renderCards(visible);
+    }
+
+    private List<MonitoredService> applyFilter(List<MonitoredService> services) {
+        if (environmentFilter.isEmpty()) return services;
+        return services.stream()
+                .filter(s -> s.getEnvironments().stream().anyMatch(environmentFilter::contains))
+                .toList();
+    }
+
+    private void renderSummaryBar(List<MonitoredService> services) {
+        summaryBar.removeAll();
+        long healthy = services.stream().filter(s -> s.isHealthStatus() && !s.isCertExpiringSoon()).count();
+        long down    = services.stream().filter(s -> !s.isHealthStatus()).count();
+        long warning = services.stream().filter(s -> s.isHealthStatus() && s.isCertExpiringSoon()).count();
+        summaryBar.add(
+                summaryChip("var(--lumo-success-color)", healthy + " Healthy"),
+                summaryChip("var(--lumo-error-color)",   down    + " Down"),
+                summaryChip("goldenrod",                  warning + " Warning")
+        );
+    }
+
+    private Span summaryChip(String color, String text) {
+        var dot = VaadinIcon.CIRCLE.create();
+        dot.setSize("12px");
+        dot.setColor(color);
+        var chip = new Span(dot, new Span(text));
+        chip.addClassName("summary-chip");
+        return chip;
+    }
+
+    private void renderCards(List<MonitoredService> services) {
+        cardGrid.removeAll();
+        services.forEach(service -> cardGrid.add(buildCard(service)));
+    }
+
+    // ── card ──────────────────────────────────────────────────────────────────
+
+    private Div buildCard(MonitoredService service) {
+        var card = new Div();
+        card.addClassName("service-card");
+        if (!service.isHealthStatus()) {
+            card.addClassName("service-card--down");
+        } else if (service.isCertExpiringSoon()) {
+            card.addClassName("service-card--warning");
+        } else {
+            card.addClassName("service-card--healthy");
         }
 
-        detailPanel.setVisible(true);
+        card.add(buildCardBody(service), buildCardActions(service));
+        return card;
+    }
 
-        String lastUpdated = service.getLastUpdated() != null
-                ? DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-                        .format(service.getLastUpdated().atZone(ZoneId.systemDefault()))
-                : "-";
+    private Div buildCardBody(MonitoredService service) {
+        var body = new Div();
+        body.addClassName("service-card-body");
+        body.addClickListener(_ -> openDetailDialog(service));
 
-        String originalUrl = service.getUrl() != null ? service.getUrl() : "";
-        String originalInfoEndpoint = service.getInfoEndpoint() != null ? service.getInfoEndpoint() : "";
-        String originalHealthEndpoint = service.getHealthEndpoint() != null ? service.getHealthEndpoint() : "";
+        // status dot · name · version
+        var dot = statusIcon(service.isHealthStatus(), service.isCertExpiringSoon(), "16px");
+        var name = new Span(service.getName() != null ? service.getName() : service.getUrl());
+        name.addClassName("service-card-name");
+        var version = new Span(service.getVersion() != null ? service.getVersion() : "");
+        version.addClassName("service-card-version");
+        var header = new Div(dot, name, version);
+        header.addClassName("service-card-header");
+
+        // URL — stop click so it doesn't also open the detail dialog
+        var urlLink = new Anchor(service.getUrl(), service.getUrl());
+        urlLink.setTarget("_blank");
+        urlLink.addClassName("service-card-url");
+        urlLink.getElement().executeJs("this.addEventListener('click', e => e.stopPropagation())");
+
+        // environment badges
+        var badgesRow = new Div();
+        badgesRow.addClassName("service-card-badges");
+        service.getEnvironments().stream()
+                .sorted(Comparator.comparingInt(Environment::getDisplayOrder)
+                        .thenComparing(Environment::getName))
+                .forEach(env -> badgesRow.add(envBadge(env)));
+
+        // cert expiry + last-checked footer
+        var footer = new Div();
+        footer.addClassName("service-card-footer");
+        if (service.getEarliestCertExpiry() != null) {
+            long days = Duration.between(Instant.now(), service.getEarliestCertExpiry()).toDays();
+            var certSpan = new Span("Cert · " + days + "d");
+            certSpan.addClassName("service-card-cert");
+            if (service.isCertExpiringSoon()) certSpan.addClassName("service-card-cert--warning");
+            footer.add(certSpan);
+        }
+        var timeSpan = new Span("Checked " + relativeTime(service.getLastUpdated()));
+        timeSpan.addClassName("service-card-time");
+        footer.add(timeSpan);
+
+        body.add(header, urlLink, badgesRow, footer);
+        return body;
+    }
+
+    private HorizontalLayout buildCardActions(MonitoredService service) {
+        var editBtn = new Button(VaadinIcon.EDIT.create(), _ -> openEditDialog(service, null));
+        editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        editBtn.setTooltipText("Edit");
+
+        var deleteBtn = new Button(VaadinIcon.TRASH.create(), _ -> openDeleteDialog(service, null));
+        deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
+        deleteBtn.setTooltipText("Delete");
+
+        var actions = new HorizontalLayout(editBtn, deleteBtn);
+        actions.addClassName("service-card-actions");
+        actions.setSpacing(false);
+        return actions;
+    }
+
+    // ── detail dialog ─────────────────────────────────────────────────────────
+
+    private void openDetailDialog(MonitoredService service) {
+        var dialog = new Dialog();
+        dialog.setWidth("480px");
+        dialog.setHeaderTitle(service.getName() != null ? service.getName() : service.getUrl());
+
+        var content = new VerticalLayout();
+        content.setPadding(false);
+        content.setSpacing(true);
+
+        // health status + version hero row
+        var dot = statusIcon(service.isHealthStatus(), service.isCertExpiringSoon(), "18px");
+        String healthColor = !service.isHealthStatus() ? "var(--lumo-error-color)"
+                : service.isCertExpiringSoon() ? "goldenrod" : "var(--lumo-success-color)";
+        String healthText = service.getHealthResponseStatus() != null
+                ? service.getHealthResponseStatus() : (service.isHealthStatus() ? "UP" : "DOWN");
+        var healthLabel = new Span(healthText);
+        healthLabel.getStyle().set("font-weight", "600").set("color", healthColor);
+        var versionLabel = new Span(service.getVersion() != null ? "v" + service.getVersion() : "");
+        versionLabel.addClassName("service-card-version");
+        var statusRow = new HorizontalLayout(dot, healthLabel, versionLabel);
+        statusRow.setAlignItems(HorizontalLayout.Alignment.CENTER);
+        statusRow.setSpacing(true);
+
+        var urlLink = new Anchor(service.getUrl(), service.getUrl());
+        urlLink.setTarget("_blank");
+        urlLink.getStyle()
+                .set("font-size", "var(--lumo-font-size-s)")
+                .set("color", "var(--lumo-primary-color)");
+
+        content.add(statusRow, urlLink, new Hr());
+
+        // status details
+        var detailsGrid = new Div();
+        detailsGrid.addClassName("detail-grid");
+        addDetailRow(detailsGrid, "Info status", infoStatusSpan(service.isInfoStatus()));
+        addDetailRow(detailsGrid, "Last check", new Span(service.getLastUpdated() != null
+                ? DATETIME_FMT.format(service.getLastUpdated()) + "  (" + relativeTime(service.getLastUpdated()) + ")"
+                : "—"));
+        if (service.getEarliestCertExpiry() != null) {
+            long days = Duration.between(Instant.now(), service.getEarliestCertExpiry()).toDays();
+            var certSpan = new Span(DATE_FMT.format(service.getEarliestCertExpiry()) + "  (" + days + " days)");
+            if (service.isCertExpiringSoon())
+                certSpan.getStyle().set("color", "goldenrod").set("font-weight", "600");
+            addDetailRow(detailsGrid, "Cert expires", certSpan);
+        }
+        content.add(detailsGrid, new Hr());
+
+        // endpoints + interval
+        var endpointsGrid = new Div();
+        endpointsGrid.addClassName("detail-grid");
+        addDetailRow(endpointsGrid, "Info endpoint", new Span(service.getInfoEndpoint()));
+        addDetailRow(endpointsGrid, "Health endpoint", new Span(service.getHealthEndpoint()));
+        int effectiveInterval = service.getEffectiveHealthCheckIntervalSeconds();
+        String intervalLabel = service.getHealthCheckIntervalSeconds() != null
+                ? effectiveInterval + "s"
+                : effectiveInterval + "s (default)";
+        addDetailRow(endpointsGrid, "Check interval", new Span(intervalLabel));
+        content.add(endpointsGrid);
+
+        // environments
+        Set<Environment> envs = service.getEnvironments();
+        if (!envs.isEmpty()) {
+            content.add(new Hr());
+            var envRow = new Div();
+            envRow.addClassName("detail-env-row");
+            envs.stream()
+                    .sorted(Comparator.comparingInt(Environment::getDisplayOrder)
+                            .thenComparing(Environment::getName))
+                    .forEach(env -> envRow.add(envBadge(env)));
+            var envSection = new VerticalLayout(sectionLabel("Environments"), envRow);
+            envSection.setPadding(false);
+            envSection.setSpacing(false);
+            content.add(envSection);
+        }
+
+        dialog.add(content);
+
+        var editBtn = new Button("Edit", VaadinIcon.EDIT.create(), _ -> {
+            dialog.close();
+            openEditDialog(service, null);
+        });
+        editBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+
+        var deleteBtn = new Button("Delete", VaadinIcon.TRASH.create(), _ -> {
+            dialog.close();
+            openDeleteDialog(service, null);
+        });
+        deleteBtn.addThemeVariants(ButtonVariant.LUMO_ERROR);
+
+        dialog.getFooter().add(new Button("Close", _ -> dialog.close()), deleteBtn, editBtn);
+        dialog.open();
+    }
+
+    // ── edit dialog ───────────────────────────────────────────────────────────
+
+    private void openEditDialog(MonitoredService service, Dialog parentToClose) {
+        var dialog = new Dialog();
+        dialog.setWidth("480px");
+        dialog.setHeaderTitle("Edit " + (service.getName() != null ? service.getName() : service.getUrl()));
+
+        String originalUrl      = service.getUrl() != null ? service.getUrl() : "";
+        String originalInfo     = service.getInfoEndpoint() != null ? service.getInfoEndpoint() : "";
+        String originalHealth   = service.getHealthEndpoint() != null ? service.getHealthEndpoint() : "";
         Integer originalInterval = service.getHealthCheckIntervalSeconds();
+        Set<Environment> originalEnvs = new HashSet<>(service.getEnvironments());
 
-        FormLayout form = new FormLayout();
-        form.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
-
-        addFormRow(form, "Name", new Span(service.getName() != null ? service.getName() : "-"));
-        addFormRow(form, "Version", new Span(service.getVersion() != null ? service.getVersion() : "-"));
-
-        urlField = new TextField();
+        var urlField = new TextField("URL");
         urlField.setValue(originalUrl);
         urlField.setWidthFull();
-        urlField.setReadOnly(!editMode);
-        addFormRow(form, "URL", urlField);
 
-        addFormRow(form, "Info status", wrapLeft(getStatusIcon(service.isInfoStatus(), false)));
-        addFormRow(form, "Health status", wrapLeft(getStatusIcon(service.isHealthStatus(), service.isCertExpiringSoon())));
-        if (service.getEarliestCertExpiry() != null) {
-            String certExpiry = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-                    .format(service.getEarliestCertExpiry().atZone(ZoneId.systemDefault()));
-            Span certExpirySpan = new Span(certExpiry);
-            if (service.isCertExpiringSoon()) {
-                certExpirySpan.getStyle().set("color", "goldenrod").set("font-weight", "bold");
-            }
-            addFormRow(form, "Cert expires", certExpirySpan);
-        }
-        addFormRow(form, "Last updated", new Span(lastUpdated));
+        var infoField = new TextField("Info endpoint");
+        infoField.setValue(originalInfo);
+        infoField.setWidthFull();
 
-        FormLayout endpointsForm = new FormLayout();
-        endpointsForm.setResponsiveSteps(new FormLayout.ResponsiveStep("0", 2));
+        var healthField = new TextField("Health endpoint");
+        healthField.setValue(originalHealth);
+        healthField.setWidthFull();
 
-        infoEndpointField = new TextField();
-        infoEndpointField.setValue(originalInfoEndpoint);
-        infoEndpointField.setWidthFull();
-        infoEndpointField.setReadOnly(!editMode);
+        var intervalField = new IntegerField("Health check interval (seconds)");
+        intervalField.setMin(5);
+        intervalField.setMax(3600);
+        intervalField.setStepButtonsVisible(true);
+        intervalField.setClearButtonVisible(true);
+        intervalField.setHelperText("Leave empty to use environment / default");
+        intervalField.setValue(originalInterval);
+        intervalField.setWidthFull();
 
-        healthEndpointField = new TextField();
-        healthEndpointField.setValue(originalHealthEndpoint);
-        healthEndpointField.setWidthFull();
-        healthEndpointField.setReadOnly(!editMode);
+        var envGroup = new CheckboxGroup<Environment>("Environments");
+        envGroup.setItems(environmentService.getAllEnvironments());
+        envGroup.setItemLabelGenerator(Environment::getName);
+        envGroup.setValue(originalEnvs);
+        envGroup.setWidthFull();
 
-        addFormRow(endpointsForm, "Info endpoint", infoEndpointField);
-        addFormRow(endpointsForm, "Health endpoint", healthEndpointField);
-
-        Set<Environment> originalEnvironments = service.getId() != null
-                ? environmentService.getEnvironmentsForService(service.getId())
-                : new HashSet<>();
-
-        environmentCheckboxGroup = new CheckboxGroup<>("Environments");
-        environmentCheckboxGroup.setItems(environmentService.getAllEnvironments());
-        environmentCheckboxGroup.setItemLabelGenerator(Environment::getName);
-        environmentCheckboxGroup.setValue(originalEnvironments);
-        environmentCheckboxGroup.setReadOnly(!editMode);
-        environmentCheckboxGroup.setWidthFull();
-
-        checkIntervalField = new IntegerField("Health Check Interval (seconds)");
-        checkIntervalField.setMin(5);
-        checkIntervalField.setMax(3600);
-        checkIntervalField.setStepButtonsVisible(true);
-        checkIntervalField.setClearButtonVisible(true);
-        checkIntervalField.setHelperText("Leave empty to use environment/default interval");
-        checkIntervalField.setValue(originalInterval);
-        checkIntervalField.setReadOnly(!editMode);
-        checkIntervalField.setWidthFull();
-
-        saveButton = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
+        var saveBtn = new Button("Save", VaadinIcon.CHECK.create(), _ -> {
             String newUrl = urlField.getValue().trim();
             if (!newUrl.equals(originalUrl)) {
                 monitoringService.updateServiceUrl(service, newUrl);
             }
-            service.setInfoEndpoint(infoEndpointField.getValue());
-            service.setHealthEndpoint(healthEndpointField.getValue());
-            service.setHealthCheckIntervalSeconds(checkIntervalField.getValue());
+            service.setInfoEndpoint(infoField.getValue().trim());
+            service.setHealthEndpoint(healthField.getValue().trim());
+            service.setHealthCheckIntervalSeconds(intervalField.getValue());
             if (service.getId() != null) {
-                environmentService.updateServiceEnvironments(service, environmentCheckboxGroup.getValue());
+                environmentService.updateServiceEnvironments(service, envGroup.getValue());
             }
             monitoringService.saveService(service);
             monitoringService.notifyListeners(service);
-            showDetails(service, false);
+            dialog.close();
+            if (parentToClose != null) parentToClose.close();
+            Notification.show("Service saved", 3000, Notification.Position.BOTTOM_START)
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
         });
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        saveButton.setVisible(editMode);
-        saveButton.setEnabled(false);
+        saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        saveBtn.setEnabled(false);
 
-        Runnable dirtyCheck = () -> {
-            boolean changed = !urlField.getValue().equals(originalUrl)
-                    || !infoEndpointField.getValue().equals(originalInfoEndpoint)
-                    || !healthEndpointField.getValue().equals(originalHealthEndpoint)
-                    || !environmentCheckboxGroup.getValue().equals(originalEnvironments)
-                    || !Objects.equals(checkIntervalField.getValue(), originalInterval);
-            saveButton.setEnabled(changed);
-        };
-        urlField.addValueChangeListener(_ -> dirtyCheck.run());
-        infoEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
-        healthEndpointField.addValueChangeListener(_ -> dirtyCheck.run());
-        environmentCheckboxGroup.addValueChangeListener(_ -> dirtyCheck.run());
-        checkIntervalField.addValueChangeListener(_ -> dirtyCheck.run());
+        Runnable dirty = () -> saveBtn.setEnabled(
+                !urlField.getValue().equals(originalUrl)
+                || !infoField.getValue().equals(originalInfo)
+                || !healthField.getValue().equals(originalHealth)
+                || !Objects.equals(intervalField.getValue(), originalInterval)
+                || !envGroup.getValue().equals(originalEnvs));
 
-        detailPanel.add(new H3("Details"), form, new H3("Endpoints"), endpointsForm,
-                new H3("Environments"), environmentCheckboxGroup,
-                new H3("Health Check"), checkIntervalField, saveButton);
+        urlField.addValueChangeListener(_ -> dirty.run());
+        infoField.addValueChangeListener(_ -> dirty.run());
+        healthField.addValueChangeListener(_ -> dirty.run());
+        intervalField.addValueChangeListener(_ -> dirty.run());
+        envGroup.addValueChangeListener(_ -> dirty.run());
+
+        var content = new VerticalLayout(urlField, infoField, healthField, intervalField, envGroup);
+        content.setPadding(false);
+        content.setSpacing(true);
+        dialog.add(content);
+        dialog.getFooter().add(new Button("Cancel", _ -> dialog.close()), saveBtn);
+        dialog.open();
     }
 
-    private void addFormRow(FormLayout form, String label, Component value) {
-        Span labelSpan = new Span(label);
-        labelSpan.addClassName("form-label");
-        form.add(labelSpan, value);
+    // ── delete dialog ─────────────────────────────────────────────────────────
+
+    private void openDeleteDialog(MonitoredService service, Dialog parentToClose) {
+        var confirm = new ConfirmDialog();
+        confirm.setHeader("Delete " + (service.getName() != null ? service.getName() : service.getUrl()));
+        confirm.setText("This will permanently remove the service and all its configuration.");
+        confirm.setCancelable(true);
+        confirm.setConfirmText("Delete");
+        confirm.setConfirmButtonTheme("error primary");
+        confirm.addConfirmListener(_ -> {
+            monitoringService.removeService(service);
+            if (parentToClose != null) parentToClose.close();
+            Notification.show("Service deleted", 3000, Notification.Position.BOTTOM_START)
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        });
+        confirm.open();
     }
 
-    private Icon getStatusIcon(boolean status, boolean warn) {
-        Icon statusIcon = VaadinIcon.CIRCLE.create();
-        String color;
-        if (!status) {
-            color = "red";
-        } else if (warn) {
-            color = "goldenrod";
+    // ── helpers ───────────────────────────────────────────────────────────────
+
+    private Icon statusIcon(boolean healthy, boolean warning, String size) {
+        var icon = VaadinIcon.CIRCLE.create();
+        icon.setSize(size);
+        icon.setColor(!healthy ? "var(--lumo-error-color)" : warning ? "goldenrod" : "var(--lumo-success-color)");
+        return icon;
+    }
+
+    private Span envBadge(Environment env) {
+        var badge = new Span(env.getName());
+        badge.addClassName("env-badge");
+        if (env.getColor() != null && !env.getColor().isBlank()) {
+            badge.addClassName("env-badge-colored");
+            badge.getStyle().set("background-color", env.getColor());
         } else {
-            color = "green";
+            badge.addClassName("env-badge-default");
         }
-        statusIcon.setColor(color);
-        statusIcon.setSize("22px");
-        return statusIcon;
+        return badge;
     }
 
-    private Component wrapLeft(Component component) {
-        HorizontalLayout wrapper = new HorizontalLayout(component);
-        wrapper.setJustifyContentMode(JustifyContentMode.START);
-        wrapper.setWidthFull();
-        wrapper.setPadding(false);
-        wrapper.setMargin(false);
-        return wrapper;
+    private void addDetailRow(Div grid, String label, com.vaadin.flow.component.Component value) {
+        var labelSpan = new Span(label);
+        labelSpan.addClassName("detail-label");
+        var row = new Div(labelSpan, value);
+        row.addClassName("detail-row");
+        grid.add(row);
     }
 
-    public MonitoredServicesComponent getMonitoredServicesComponent() {
-        return monitoredServicesComponent;
+    private Span infoStatusSpan(boolean ok) {
+        var dot = VaadinIcon.CIRCLE.create();
+        dot.setColor(ok ? "var(--lumo-success-color)" : "var(--lumo-error-color)");
+        dot.setSize("14px");
+        var span = new Span(dot, new Span(ok ? "OK" : "Unavailable"));
+        span.getStyle().set("display", "inline-flex").set("align-items", "center").set("gap", "4px");
+        return span;
+    }
+
+    private Span sectionLabel(String text) {
+        var label = new Span(text);
+        label.addClassName("detail-label");
+        return label;
+    }
+
+    private static String relativeTime(Instant instant) {
+        if (instant == null) return "never";
+        long seconds = Duration.between(instant, Instant.now()).toSeconds();
+        if (seconds < 60) return seconds + "s ago";
+        long minutes = seconds / 60;
+        if (minutes < 60) return minutes + " min ago";
+        long hours = minutes / 60;
+        if (hours < 24) return hours + "h ago";
+        return (hours / 24) + "d ago";
     }
 }

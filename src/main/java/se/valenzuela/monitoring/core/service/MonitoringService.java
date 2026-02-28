@@ -7,10 +7,10 @@ import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.core.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
 import se.valenzuela.monitoring.core.model.MonitoredService;
+import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
-import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 import se.valenzuela.monitoring.settings.service.AppSettingService;
 import tools.jackson.databind.JsonNode;
 
@@ -92,6 +92,16 @@ public class MonitoringService {
 
     public List<MonitoredService> getServicesWithEnvironments() {
         return repository.findAllWithEnvironments();
+    }
+
+    public List<MonitoredService> getServicesForDisplay() {
+        List<MonitoredService> services = repository.findAllWithEnvironments();
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (MonitoredService service : services) {
+                executor.submit(() -> fetchStatus(service));
+            }
+        }
+        return services;
     }
 
     public void fetchHealthStatuses(List<MonitoredService> services) {
@@ -178,7 +188,7 @@ public class MonitoringService {
                 }
                 for (JsonNode cert : certificates) {
                     JsonNode validityEnds = cert.get("validityEnds");
-                    if (validityEnds != null && validityEnds.isTextual()) {
+                    if (validityEnds != null && validityEnds.isString()) {
                         try {
                             Instant expiry = Instant.parse(validityEnds.asString());
                             if (earliest == null || expiry.isBefore(earliest)) {

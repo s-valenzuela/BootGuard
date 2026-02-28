@@ -36,7 +36,7 @@ public class MainView extends Main {
         environmentFilter.setClearButtonVisible(true);
         environmentFilter.setWidth("300px");
         environmentFilter.addValueChangeListener(_ ->
-                servicesView.getMonitoredServicesComponent().setEnvironmentFilter(environmentFilter.getValue()));
+                servicesView.setEnvironmentFilter(environmentFilter.getValue()));
 
         var addButton = new AddMonitoredServiceComponent(monitoringService, environmentService);
 
