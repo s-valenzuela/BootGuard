@@ -164,15 +164,19 @@ public class MonitoringService {
         if (sslNode == null || !sslNode.has("details")) {
             return;
         }
-        Instant earliest = null;
         JsonNode details = sslNode.get("details");
-        for (JsonNode bundle : details) {
-            JsonNode certChain = bundle.get("certificateChain");
-            if (certChain == null) {
+        Instant earliest = null;
+        for (String chainType : new String[]{"validChains", "expiringChains", "invalidChains"}) {
+            JsonNode chains = details.get(chainType);
+            if (chains == null || !chains.isArray()) {
                 continue;
             }
-            for (JsonNode aliasEntry : certChain) {
-                for (JsonNode cert : aliasEntry) {
+            for (JsonNode chain : chains) {
+                JsonNode certificates = chain.get("certificates");
+                if (certificates == null || !certificates.isArray()) {
+                    continue;
+                }
+                for (JsonNode cert : certificates) {
                     JsonNode validityEnds = cert.get("validityEnds");
                     if (validityEnds != null && validityEnds.isTextual()) {
                         try {
