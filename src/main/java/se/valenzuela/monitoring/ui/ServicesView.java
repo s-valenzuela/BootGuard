@@ -64,6 +64,15 @@ public class ServicesView extends VerticalLayout {
         summaryBar.setPadding(false);
 
         cardGrid.addClassName("service-card-grid");
+        cardGrid.setWidthFull();
+        cardGrid.getStyle()
+                .set("display", "grid")
+                .set("grid-template-columns", "repeat(auto-fill, minmax(300px, 1fr))")
+                .set("gap", "var(--lumo-space-m)")
+                .set("padding", "var(--lumo-space-m)")
+                .set("align-content", "start")
+                .set("overflow-y", "auto")
+                .set("box-sizing", "border-box");
 
         add(summaryBar);
         addAndExpand(cardGrid);
