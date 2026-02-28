@@ -29,7 +29,6 @@ import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
 import se.valenzuela.monitoring.notification.service.NotificationConfigService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.EmailListField;
-import se.valenzuela.monitoring.ui.component.ViewToolbar;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -61,8 +60,6 @@ public class NotificationSettingsView extends Main {
 
         addClassNames("view-content", LumoUtility.BoxSizing.BORDER, "scrollable-page");
         setWidthFull();
-
-        add(new ViewToolbar("Notification Settings"));
 
         var content = new VerticalLayout();
         content.setPadding(false);

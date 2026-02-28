@@ -12,7 +12,6 @@ import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import se.valenzuela.monitoring.settings.service.AppSettingService;
-import se.valenzuela.monitoring.ui.component.ViewToolbar;
 
 @Route("settings")
 @Menu(order = 15, icon = "vaadin:cog", title = "Settings")
@@ -21,8 +20,6 @@ public class SettingsView extends Main {
     public SettingsView(AppSettingService appSettingService) {
         addClassNames("view-content", LumoUtility.BoxSizing.BORDER, "scrollable-page");
         setWidthFull();
-
-        add(new ViewToolbar("Settings"));
 
         var content = new VerticalLayout();
         content.setPadding(false);

@@ -21,7 +21,6 @@ import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import se.valenzuela.monitoring.core.model.Environment;
 import se.valenzuela.monitoring.core.service.EnvironmentService;
-import se.valenzuela.monitoring.ui.component.ViewToolbar;
 
 import java.util.ArrayList;
 
@@ -42,7 +41,11 @@ public class EnvironmentsView extends Main {
         var addButton = new Button("Add Environment", VaadinIcon.PLUS.create(), _ -> openDialog(null));
         addButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        add(new ViewToolbar("Environments", addButton));
+        var actionBar = new HorizontalLayout(addButton);
+        actionBar.setWidthFull();
+        actionBar.setJustifyContentMode(HorizontalLayout.JustifyContentMode.END);
+        actionBar.setPadding(true);
+        add(actionBar);
 
         grid = createGrid();
         add(grid);

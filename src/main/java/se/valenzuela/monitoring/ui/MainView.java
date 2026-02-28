@@ -12,7 +12,6 @@ import se.valenzuela.monitoring.core.model.Environment;
 import se.valenzuela.monitoring.core.service.EnvironmentService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.AddMonitoredServiceComponent;
-import se.valenzuela.monitoring.ui.component.ViewToolbar;
 
 /**
  * This view shows up when a user navigates to the root ('/') of the application.
@@ -44,14 +43,13 @@ public class MainView extends Main {
         actionBar.setWidthFull();
         actionBar.setJustifyContentMode(HorizontalLayout.JustifyContentMode.BETWEEN);
         actionBar.setAlignItems(HorizontalLayout.Alignment.END);
-        actionBar.setPadding(false);
+        actionBar.setPadding(true);
 
         var contentDiv = new Div(servicesView);
         contentDiv.addClassNames(LumoUtility.Flex.GROW, LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
                 LumoUtility.Overflow.HIDDEN);
         contentDiv.setSizeFull();
 
-        add(new ViewToolbar("Spring Boot monitoring"));
         add(actionBar);
         add(contentDiv);
 
