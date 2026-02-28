@@ -102,8 +102,17 @@ public class ServicesView extends HorizontalLayout {
         urlField.setReadOnly(!editMode);
         addFormRow(form, "URL", urlField);
 
-        addFormRow(form, "Info status", wrapLeft(getStatusIcon(service.isInfoStatus())));
-        addFormRow(form, "Health status", wrapLeft(getStatusIcon(service.isHealthStatus())));
+        addFormRow(form, "Info status", wrapLeft(getStatusIcon(service.isInfoStatus(), false)));
+        addFormRow(form, "Health status", wrapLeft(getStatusIcon(service.isHealthStatus(), service.isCertExpiringSoon())));
+        if (service.getEarliestCertExpiry() != null) {
+            String certExpiry = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+                    .format(service.getEarliestCertExpiry().atZone(ZoneId.systemDefault()));
+            Span certExpirySpan = new Span(certExpiry);
+            if (service.isCertExpiringSoon()) {
+                certExpirySpan.getStyle().set("color", "goldenrod").set("font-weight", "bold");
+            }
+            addFormRow(form, "Cert expires", certExpirySpan);
+        }
         addFormRow(form, "Last updated", new Span(lastUpdated));
 
         FormLayout endpointsForm = new FormLayout();
@@ -187,9 +196,17 @@ public class ServicesView extends HorizontalLayout {
         form.add(labelSpan, value);
     }
 
-    private Icon getStatusIcon(boolean status) {
+    private Icon getStatusIcon(boolean status, boolean warn) {
         Icon statusIcon = VaadinIcon.CIRCLE.create();
-        statusIcon.setColor(status ? "green" : "red");
+        String color;
+        if (!status) {
+            color = "red";
+        } else if (warn) {
+            color = "goldenrod";
+        } else {
+            color = "green";
+        }
+        statusIcon.setColor(color);
         statusIcon.setSize("22px");
         return statusIcon;
     }

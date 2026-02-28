@@ -54,7 +54,15 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
 
         addComponentColumn(service -> {
             Icon icon = VaadinIcon.CIRCLE.create();
-            icon.setColor(service.isHealthStatus() ? "green" : "red");
+            String color;
+            if (!service.isHealthStatus()) {
+                color = "red";
+            } else if (service.isCertExpiringSoon()) {
+                color = "goldenrod";
+            } else {
+                color = "green";
+            }
+            icon.setColor(color);
             icon.setSize("22px");
             return icon;
         }).setHeader("Status").setAutoWidth(true).setFlexGrow(0).setSortable(true);
