@@ -315,17 +315,80 @@ vaadin-app-layout::part(navbar) {
     gap: var(--lumo-space-xs);
 }
 
-/* Override state badges */
+/* ── Notification page ───────────────────────────────────────────────────── */
 
-.override-state--enabled {
+.notif-section-header {
+    margin-top: var(--lumo-space-l);
+    margin-bottom: var(--lumo-space-m);
+}
+
+.notif-section-header:first-child {
+    margin-top: 0;
+}
+
+.notif-section-title {
+    display: block;
+    font-weight: 700;
+    font-size: var(--lumo-font-size-l);
+    margin-bottom: var(--lumo-space-xs);
+}
+
+.notif-section-desc {
+    display: block;
+    font-size: var(--lumo-font-size-s);
+    color: var(--lumo-secondary-text-color);
+}
+
+/* Channel status badge */
+
+.channel-status-badge {
+    font-size: var(--lumo-font-size-xs);
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: var(--lumo-border-radius-s);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+
+.channel-status-badge--active {
+    background-color: var(--lumo-success-color-10pct);
     color: var(--lumo-success-color);
 }
 
-.override-state--disabled {
+.channel-status-badge--inactive {
+    background-color: var(--lumo-contrast-10pct);
+    color: var(--lumo-secondary-text-color);
+}
+
+/* Channel card footer */
+
+.channel-card-footer {
+    border-top: 1px solid var(--lumo-contrast-5pct);
+    margin-top: var(--lumo-space-xs);
+}
+
+/* Override grid badges */
+
+.override-badge {
+    font-size: var(--lumo-font-size-xs);
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: var(--lumo-border-radius-s);
+    white-space: nowrap;
+}
+
+.override-badge--enabled {
+    background-color: var(--lumo-success-color-10pct);
+    color: var(--lumo-success-color);
+}
+
+.override-badge--disabled {
+    background-color: var(--lumo-error-color-10pct);
     color: var(--lumo-error-color);
 }
 
-.override-state--inherit {
+.override-badge--inherit {
+    background-color: var(--lumo-contrast-5pct);
     color: var(--lumo-secondary-text-color);
 }
 
