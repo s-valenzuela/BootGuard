@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.core.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.client.HealthStatus;
 import se.valenzuela.monitoring.core.client.LoggersResponse;
 import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
@@ -14,6 +15,8 @@ import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
 import se.valenzuela.monitoring.settings.service.AppSettingService;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import org.springframework.http.MediaType;
 import java.time.Instant;
@@ -28,6 +31,8 @@ import java.util.function.Consumer;
 @Slf4j
 @Service
 public class MonitoringService {
+
+    private static final JsonMapper JSON_MAPPER = JsonMapper.builder().build();
 
     private final RestClient restClient;
     private final MonitoredServiceRepository repository;
@@ -139,13 +144,13 @@ public class MonitoringService {
                     .retrieve()
                     .body(HealthEndpointResponse.class);
             service.setHealthResponseStatus(health != null ? health.status() : null);
-            service.setHealthStatus(health != null && "UP".equalsIgnoreCase(health.status()));
+            service.setHealthStatus(health != null && HealthStatus.UP.equalsIgnoreCase(health.status()));
             if (health != null) {
                 extractCertificateExpiry(service, health);
             }
         } catch (Exception e) {
             service.setHealthStatus(false);
-            service.setHealthResponseStatus("DOWN");
+            service.setHealthResponseStatus(HealthStatus.DOWN);
         }
         service.setLastUpdated(Instant.now());
     }
@@ -158,13 +163,13 @@ public class MonitoringService {
     }
 
     public void setLoggerLevel(MonitoredService service, String loggerName, String level) {
-        String body = level != null
-                ? "{\"configuredLevel\":\"" + level + "\"}"
-                : "{\"configuredLevel\":null}";
+        ObjectNode bodyNode = JSON_MAPPER.createObjectNode();
+        if (level != null) bodyNode.put("configuredLevel", level);
+        else bodyNode.putNull("configuredLevel");
         restClient.post()
                 .uri(service.getUrl() + "/actuator/loggers/{name}", loggerName)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
+                .body(bodyNode.toString())
                 .retrieve()
                 .toBodilessEntity();
     }

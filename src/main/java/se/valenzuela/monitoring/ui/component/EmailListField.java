@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class EmailListField extends VerticalLayout {
 
-    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+    public static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$");
 
     private final List<String> emails = new ArrayList<>();

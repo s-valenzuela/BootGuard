@@ -4,7 +4,6 @@ import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.Checkbox;
-import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Div;
@@ -30,6 +29,7 @@ import se.valenzuela.monitoring.notification.model.NotificationServiceOverride;
 import se.valenzuela.monitoring.notification.event.ServiceHealthChangedEvent;
 import se.valenzuela.monitoring.notification.service.NotificationConfigService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
+import se.valenzuela.monitoring.ui.component.BaseDialog;
 import se.valenzuela.monitoring.ui.component.EmailListField;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -260,86 +260,90 @@ public class NotificationSettingsView extends Main {
     // ── override dialog ───────────────────────────────────────────────────────
 
     private void openOverrideDialog(MonitoredService service, Grid<MonitoredService> grid) {
-        var dialog = new Dialog();
-        String name = service.getName() != null ? service.getName() : service.getUrl();
-        dialog.setHeaderTitle("Overrides \u2014 " + name);
-        dialog.setWidth("480px");
+        new ServiceOverrideDialog(service, channels, configService, grid).open();
+    }
 
-        var content = new VerticalLayout();
-        content.setPadding(false);
-        content.setSpacing(true);
+    private static class ServiceOverrideDialog extends BaseDialog {
 
-        Map<String, NotificationServiceOverride> existingOverrides =
-                configService.getOverridesForService(service.getId()).stream()
-                        .collect(Collectors.toMap(NotificationServiceOverride::getChannelType, o -> o));
+        ServiceOverrideDialog(MonitoredService service, List<NotificationChannel> channels,
+                              NotificationConfigService configService, Grid<MonitoredService> grid) {
+            super("Overrides \u2014 " + (service.getName() != null ? service.getName() : service.getUrl()));
 
-        boolean first = true;
-        for (NotificationChannel channel : channels) {
-            if (!first) content.add(new Hr());
-            first = false;
+            var content = new VerticalLayout();
+            content.setPadding(false);
+            content.setSpacing(true);
 
-            var channelTitle = new Span(channel.displayName());
-            channelTitle.addClassName("channel-card-title");
+            Map<String, NotificationServiceOverride> existingOverrides =
+                    configService.getOverridesForService(service.getId()).stream()
+                            .collect(Collectors.toMap(NotificationServiceOverride::getChannelType, o -> o));
 
-            var stateSelect = new Select<String>();
-            stateSelect.setLabel("Notification state");
-            stateSelect.setItems("Inherit", "Enabled", "Disabled");
-            stateSelect.setHelperText("Inherit uses the channel\u2019s global setting");
+            boolean first = true;
+            for (NotificationChannel channel : channels) {
+                if (!first) content.add(new Hr());
+                first = false;
 
-            NotificationServiceOverride existing = existingOverrides.get(channel.channelType());
-            stateSelect.setValue(existing != null && existing.getEnabled() != null
-                    ? (existing.getEnabled() ? "Enabled" : "Disabled")
-                    : "Inherit");
+                var channelTitle = new Span(channel.displayName());
+                channelTitle.addClassName("channel-card-title");
 
-            String existingJson = existing != null ? existing.getConfigJson() : null;
-            var overrideResult = buildConfigForm(channel.configFields(), existingJson);
-            var overrideForm = new VerticalLayout();
-            overrideForm.setPadding(false);
-            overrideForm.setSpacing(true);
-            overrideResult.components().forEach((_, comp) -> {
-                if (comp instanceof TextField tf) {
-                    tf.setRequiredIndicatorVisible(false);
-                    tf.setPlaceholder("Leave empty to inherit");
-                }
-                overrideForm.add(comp);
-            });
+                var stateSelect = new Select<String>();
+                stateSelect.setLabel("Notification state");
+                stateSelect.setItems("Inherit", "Enabled", "Disabled");
+                stateSelect.setHelperText("Inherit uses the channel\u2019s global setting");
 
-            final NotificationServiceOverride captured = existing;
-            var saveBtn = new Button("Apply", VaadinIcon.CHECK.create(), _ -> {
-                String selected = stateSelect.getValue();
-                if ("Inherit".equals(selected)) {
-                    if (captured != null) configService.deleteOverride(captured);
-                } else {
-                    NotificationServiceOverride override = captured != null ? captured
-                            : new NotificationServiceOverride(service, channel.channelType());
-                    override.setEnabled("Enabled".equals(selected));
-                    String json = fieldsToJson(overrideResult.valueGetters());
-                    override.setConfigJson("{}".equals(json) ? null : json);
-                    configService.saveOverride(override);
-                }
-                grid.getDataProvider().refreshAll();
-                Notification.show("Override saved for " + channel.displayName(),
-                        3000, Notification.Position.BOTTOM_START)
-                        .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
-            });
-            saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+                NotificationServiceOverride existing = existingOverrides.get(channel.channelType());
+                stateSelect.setValue(existing != null && existing.getEnabled() != null
+                        ? (existing.getEnabled() ? "Enabled" : "Disabled")
+                        : "Inherit");
 
-            content.add(channelTitle, stateSelect, overrideForm, saveBtn);
+                String existingJson = existing != null ? existing.getConfigJson() : null;
+                var overrideResult = buildConfigForm(channel.configFields(), existingJson);
+                var overrideForm = new VerticalLayout();
+                overrideForm.setPadding(false);
+                overrideForm.setSpacing(true);
+                overrideResult.components().forEach((_, comp) -> {
+                    if (comp instanceof TextField tf) {
+                        tf.setRequiredIndicatorVisible(false);
+                        tf.setPlaceholder("Leave empty to inherit");
+                    }
+                    overrideForm.add(comp);
+                });
+
+                final NotificationServiceOverride captured = existing;
+                var saveBtn = new Button("Apply", VaadinIcon.CHECK.create(), _ -> {
+                    String selected = stateSelect.getValue();
+                    if ("Inherit".equals(selected)) {
+                        if (captured != null) configService.deleteOverride(captured);
+                    } else {
+                        NotificationServiceOverride override = captured != null ? captured
+                                : new NotificationServiceOverride(service, channel.channelType());
+                        override.setEnabled("Enabled".equals(selected));
+                        String json = fieldsToJson(overrideResult.valueGetters());
+                        override.setConfigJson("{}".equals(json) ? null : json);
+                        configService.saveOverride(override);
+                    }
+                    grid.getDataProvider().refreshAll();
+                    Notification.show("Override saved for " + channel.displayName(),
+                            3000, Notification.Position.BOTTOM_START)
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                });
+                saveBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+
+                content.add(channelTitle, stateSelect, overrideForm, saveBtn);
+            }
+
+            var scrollable = new VerticalLayout(content);
+            scrollable.setPadding(false);
+            scrollable.addClassName("dialog-scroll-content");
+            getFooter().add(closeButton());
+            add(scrollable);
         }
-
-        var scrollable = new VerticalLayout(content);
-        scrollable.setPadding(false);
-        scrollable.addClassName("dialog-scroll-content");
-        dialog.getFooter().add(new Button("Close", _ -> dialog.close()));
-        dialog.add(scrollable);
-        dialog.open();
     }
 
     // ── form helpers ──────────────────────────────────────────────────────────
 
     private record ConfigFormResult(Map<String, Component> components, Map<String, Supplier<String>> valueGetters) {}
 
-    private ConfigFormResult buildConfigForm(List<ConfigField> fields, String json) {
+    private static ConfigFormResult buildConfigForm(List<ConfigField> fields, String json) {
         JsonNode node = null;
         if (json != null && !json.isBlank()) {
             try { node = JSON_MAPPER.readTree(json); } catch (Exception ignored) {}
@@ -379,7 +383,7 @@ public class NotificationSettingsView extends Main {
         return new ConfigFormResult(components, valueGetters);
     }
 
-    private String fieldsToJson(Map<String, Supplier<String>> valueGetters) {
+    private static String fieldsToJson(Map<String, Supplier<String>> valueGetters) {
         ObjectNode node = JSON_MAPPER.createObjectNode();
         valueGetters.forEach((key, getter) -> {
             String val = getter.get();
