@@ -29,7 +29,7 @@ public class AddMonitoredServiceComponent extends Button {
     private final EnvironmentService environmentService;
 
     public AddMonitoredServiceComponent(MonitoringService monitoringService, EnvironmentService environmentService) {
-        super(VaadinIcon.PLUS.create());
+        super("Add service", VaadinIcon.PLUS.create());
         this.monitoringService = monitoringService;
         this.environmentService = environmentService;
         addThemeVariants(ButtonVariant.LUMO_PRIMARY);
