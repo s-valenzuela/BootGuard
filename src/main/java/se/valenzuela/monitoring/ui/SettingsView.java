@@ -39,20 +39,18 @@ public class SettingsView extends Main {
 
     private VerticalLayout buildCertExpiryCard(AppSettingService appSettingService) {
         var card = new VerticalLayout();
-        card.addClassName("channel-card");
+        card.addClassNames("channel-card", "channel-card--narrow");
         card.setSpacing(false);
         card.setPadding(false);
-        card.getStyle().set("padding", "0").set("gap", "0").set("overflow", "hidden");
-        card.setMaxWidth("480px");
 
         // header
         var title = new Span("Certificate expiry");
         title.addClassName("channel-card-title");
         var header = new HorizontalLayout(title);
+        header.addClassName("channel-card-header");
         header.setAlignItems(HorizontalLayout.Alignment.CENTER);
         header.setWidthFull();
         header.setPadding(false);
-        header.getStyle().set("padding", "var(--lumo-space-m)");
 
         // form
         var expiryField = new IntegerField("Warn when expiry is within (days)");
@@ -64,9 +62,9 @@ public class SettingsView extends Main {
         expiryField.setWidthFull();
 
         var form = new VerticalLayout(expiryField);
+        form.addClassName("channel-card-form");
         form.setSpacing(false);
         form.setPadding(false);
-        form.getStyle().set("padding", "var(--lumo-space-xs) var(--lumo-space-m)");
 
         // footer — button declared before listener so the lambda can reference it
         var saveButton = new Button("Save", VaadinIcon.CHECK.create());
@@ -96,7 +94,6 @@ public class SettingsView extends Main {
         footer.addClassName("channel-card-footer");
         footer.setJustifyContentMode(HorizontalLayout.JustifyContentMode.END);
         footer.setPadding(false);
-        footer.getStyle().set("padding", "var(--lumo-space-xs) var(--lumo-space-m)");
 
         card.add(header, new Hr(), form, footer);
         return card;

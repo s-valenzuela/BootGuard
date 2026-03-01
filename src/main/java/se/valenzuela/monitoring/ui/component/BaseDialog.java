@@ -5,8 +5,11 @@ import com.vaadin.flow.component.dialog.Dialog;
 
 public abstract class BaseDialog extends Dialog {
 
+    protected static final String WIDTH_DEFAULT = "480px";
+    protected static final String WIDTH_WIDE    = "680px";
+
     protected BaseDialog(String title) {
-        this(title, "480px");
+        this(title, WIDTH_DEFAULT);
     }
 
     protected BaseDialog(String title, String width) {

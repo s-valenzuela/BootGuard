@@ -28,7 +28,7 @@ public class ServiceLoggersDialog extends BaseDialog {
     private static final List<String> LOG_LEVELS = List.of("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF");
 
     public ServiceLoggersDialog(MonitoredService service, MonitoringService monitoringService) {
-        super("Loggers \u2014 " + (service.getName() != null ? service.getName() : service.getUrl()), "680px");
+        super("Loggers — " + (service.getName() != null ? service.getName() : service.getUrl()), WIDTH_WIDE);
         setHeight("70vh");
         build(service, monitoringService);
     }
@@ -78,9 +78,7 @@ public class ServiceLoggersDialog extends BaseDialog {
         });
 
         var hint = new Span("Showing loggers with an explicit level. Search to find any logger.");
-        hint.getStyle()
-                .set("font-size", "var(--lumo-font-size-xs)")
-                .set("color", "var(--lumo-secondary-text-color)");
+        hint.addClassName("logger-hint");
 
         var grid = new Grid<LoggerRow>();
         grid.setDataProvider(dataProvider);
@@ -141,26 +139,8 @@ public class ServiceLoggersDialog extends BaseDialog {
 
     private static Span levelBadge(String level) {
         var badge = new Span(level != null ? level : "—");
-        badge.getStyle()
-                .set("font-size", "var(--lumo-font-size-xs)")
-                .set("font-weight", "600")
-                .set("padding", "1px 6px")
-                .set("border-radius", "var(--lumo-border-radius-s)")
-                .set("background", levelBadgeColor(level))
-                .set("color", "white");
+        badge.addClassName("level-badge");
+        if (level != null) badge.addClassName("level-badge--" + level.toLowerCase());
         return badge;
-    }
-
-    private static String levelBadgeColor(String level) {
-        if (level == null) return "var(--lumo-contrast-40pct)";
-        return switch (level) {
-            case "TRACE" -> "#6b7280";
-            case "DEBUG" -> "#3b82f6";
-            case "INFO"  -> "#22c55e";
-            case "WARN"  -> "#f59e0b";
-            case "ERROR" -> "#ef4444";
-            case "OFF"   -> "#1f2937";
-            default      -> "var(--lumo-contrast-40pct)";
-        };
     }
 }

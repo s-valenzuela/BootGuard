@@ -42,25 +42,25 @@ public class ServiceDetailDialog extends BaseDialog {
         content.setSpacing(true);
 
         // health status + version hero row
-        var dot = ServiceViewUtils.statusIcon(service.isHealthStatus(), service.isCertExpiringSoon(), "18px");
-        String healthColor = !service.isHealthStatus() ? ServiceViewUtils.COLOR_ERROR
-                : service.isCertExpiringSoon() ? ServiceViewUtils.COLOR_WARNING : ServiceViewUtils.COLOR_SUCCESS;
+        var dot = ServiceViewUtils.statusIcon(service.isHealthStatus(), service.isCertExpiringSoon());
         String healthText = service.getHealthResponseStatus() != null
                 ? service.getHealthResponseStatus()
                 : (service.isHealthStatus() ? HealthStatus.UP : HealthStatus.DOWN);
         var healthLabel = new Span(healthText);
-        healthLabel.getStyle().set("font-weight", "600").set("color", healthColor);
+        healthLabel.addClassName("health-label");
+        if (!service.isHealthStatus())      healthLabel.addClassName("health-label--down");
+        else if (service.isCertExpiringSoon()) healthLabel.addClassName("health-label--warning");
+        else                                healthLabel.addClassName("health-label--healthy");
         var versionLabel = new Span(service.getVersion() != null ? "v" + service.getVersion() : "");
         versionLabel.addClassName("service-card-version");
         var statusRow = new HorizontalLayout(dot, healthLabel, versionLabel);
+        statusRow.addClassName("detail-status-row");
         statusRow.setAlignItems(HorizontalLayout.Alignment.CENTER);
         statusRow.setSpacing(true);
 
         var urlLink = new Anchor(service.getUrl(), service.getUrl());
         urlLink.setTarget("_blank");
-        urlLink.getStyle()
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("color", "var(--lumo-primary-color)");
+        urlLink.addClassName("detail-url-link");
 
         content.add(statusRow, urlLink, new Hr());
 
@@ -75,7 +75,7 @@ public class ServiceDetailDialog extends BaseDialog {
             long days = Duration.between(Instant.now(), service.getEarliestCertExpiry()).toDays();
             var certSpan = new Span(DATE_FMT.format(service.getEarliestCertExpiry()) + "  (" + days + " days)");
             if (service.isCertExpiringSoon())
-                certSpan.getStyle().set("color", ServiceViewUtils.COLOR_WARNING).set("font-weight", "600");
+                certSpan.addClassName("cert-expiry--warning");
             addDetailRow(detailsGrid, "Cert expires", certSpan);
         }
         content.add(detailsGrid, new Hr());
@@ -149,11 +149,9 @@ public class ServiceDetailDialog extends BaseDialog {
     }
 
     private Span infoStatusSpan(boolean ok) {
-        var dot = VaadinIcon.CIRCLE.create();
-        dot.setColor(ok ? ServiceViewUtils.COLOR_SUCCESS : ServiceViewUtils.COLOR_ERROR);
-        dot.setSize("14px");
+        var dot = ServiceViewUtils.statusIcon(ok, false);
         var span = new Span(dot, new Span(ok ? "OK" : "Unavailable"));
-        span.getStyle().set("display", "inline-flex").set("align-items", "center").set("gap", "4px");
+        span.addClassName("info-status-span");
         return span;
     }
 

@@ -6,7 +6,6 @@ import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -52,20 +51,9 @@ public class MonitoredServicesComponent extends Grid<MonitoredService> {
         addColumn(MonitoredService::getVersion).setAutoWidth(true).setFlexGrow(0).setHeader("Version");
         addColumn(MonitoredService::getUrl).setHeader("URL").setSortable(true).setFlexGrow(1);
 
-        addComponentColumn(service -> {
-            Icon icon = VaadinIcon.CIRCLE.create();
-            String color;
-            if (!service.isHealthStatus()) {
-                color = "red";
-            } else if (service.isCertExpiringSoon()) {
-                color = "goldenrod";
-            } else {
-                color = "green";
-            }
-            icon.setColor(color);
-            icon.setSize("22px");
-            return icon;
-        }).setHeader("Status").setAutoWidth(true).setFlexGrow(0).setSortable(true);
+        addComponentColumn(service ->
+                ServiceViewUtils.statusIcon(service.isHealthStatus(), service.isCertExpiringSoon())
+        ).setHeader("Status").setAutoWidth(true).setFlexGrow(0).setSortable(true);
 
         loadEnvironmentCache();
 

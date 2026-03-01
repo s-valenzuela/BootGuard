@@ -84,7 +84,7 @@ public class NotificationSettingsView extends Main {
 
         // ── Service overrides ──────────────────────────────────────────────
         page.add(sectionHeader("Service overrides",
-                "Fine-tune which channels alert for each service. \u201cInherit\u201d follows the channel\u2019s global setting."));
+                "Fine-tune which channels alert for each service. “Inherit” follows the channel’s global setting."));
         page.add(createServiceOverridesGrid());
 
         add(page);
@@ -114,23 +114,22 @@ public class NotificationSettingsView extends Main {
         card.addClassName("channel-card");
         card.setSpacing(false);
         card.setPadding(false);
-        card.getStyle().set("padding", "0").set("gap", "0").set("overflow", "hidden");
 
         // header: channel name + status badge
         var statusBadge = buildStatusBadge(isEnabled);
         var title = new Span(channel.displayName());
         title.addClassName("channel-card-title");
         var header = new HorizontalLayout(title, statusBadge);
+        header.addClassName("channel-card-header");
         header.setAlignItems(HorizontalLayout.Alignment.CENTER);
         header.setJustifyContentMode(HorizontalLayout.JustifyContentMode.BETWEEN);
         header.setWidthFull();
         header.setPadding(false);
-        header.getStyle().set("padding", "var(--lumo-space-m)");
 
         // enable toggle
         var enabledCheckbox = new Checkbox("Send notifications via " + channel.displayName());
         enabledCheckbox.setValue(isEnabled);
-        enabledCheckbox.getStyle().set("padding", "var(--lumo-space-xs) var(--lumo-space-m)");
+        enabledCheckbox.addClassName("channel-card-checkbox");
 
         // config form
         var formResult = buildConfigForm(channel.configFields(), globalConfig.getConfigJson());
@@ -138,7 +137,6 @@ public class NotificationSettingsView extends Main {
         form.addClassName("channel-card-form");
         form.setSpacing(true);
         form.setPadding(false);
-        form.getStyle().set("padding", "0 var(--lumo-space-m) var(--lumo-space-xs)");
         formResult.components().values().forEach(form::add);
 
         // footer: test + save
@@ -174,7 +172,6 @@ public class NotificationSettingsView extends Main {
         footer.setJustifyContentMode(HorizontalLayout.JustifyContentMode.END);
         footer.setSpacing(true);
         footer.setPadding(false);
-        footer.getStyle().set("padding", "var(--lumo-space-xs) var(--lumo-space-m)");
 
         form.setVisible(isEnabled);
         footer.setVisible(isEnabled);
@@ -267,7 +264,7 @@ public class NotificationSettingsView extends Main {
 
         ServiceOverrideDialog(MonitoredService service, List<NotificationChannel> channels,
                               NotificationConfigService configService, Grid<MonitoredService> grid) {
-            super("Overrides \u2014 " + (service.getName() != null ? service.getName() : service.getUrl()));
+            super("Overrides — " + (service.getName() != null ? service.getName() : service.getUrl()));
 
             var content = new VerticalLayout();
             content.setPadding(false);
@@ -288,7 +285,7 @@ public class NotificationSettingsView extends Main {
                 var stateSelect = new Select<String>();
                 stateSelect.setLabel("Notification state");
                 stateSelect.setItems("Inherit", "Enabled", "Disabled");
-                stateSelect.setHelperText("Inherit uses the channel\u2019s global setting");
+                stateSelect.setHelperText("Inherit uses the channel’s global setting");
 
                 NotificationServiceOverride existing = existingOverrides.get(channel.channelType());
                 stateSelect.setValue(existing != null && existing.getEnabled() != null
@@ -361,13 +358,12 @@ public class NotificationSettingsView extends Main {
                 var tf = new TextField(field.label());
                 tf.setRequiredIndicatorVisible(field.required());
                 if (field.description() != null) tf.setHelperText(field.description());
-                String fullValue = value;
                 if (!value.isEmpty()) tf.setValue(maskSecret(value));
                 tf.setWidthFull();
                 components.put(field.key(), tf);
                 valueGetters.put(field.key(), () -> {
                     String current = tf.getValue().trim();
-                    return current.endsWith("**********") && !fullValue.isEmpty() ? fullValue : current;
+                    return current.endsWith("**********") && !value.isEmpty() ? value : current;
                 });
             } else {
                 var tf = new TextField(field.label());

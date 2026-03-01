@@ -1,27 +1,26 @@
 package se.valenzuela.monitoring.ui.component;
 
-import com.vaadin.flow.component.AbstractField;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.NativeLabel;
 import com.vaadin.flow.component.textfield.TextField;
+import lombok.Getter;
 
 public class ColorPickerField extends Div {
 
     private final Div colorInput = new Div();
     private final TextField hexField = new TextField();
+    @Getter
     private String value = "";
 
     public ColorPickerField(String label) {
         var labelComponent = new NativeLabel(label);
         labelComponent.addClassName("form-label");
 
-        colorInput.getElement().setProperty("innerHTML",
-                "<input type='color' style='width:40px;height:40px;border:none;padding:0;cursor:pointer;background:none;'>");
+        colorInput.getElement().setProperty("innerHTML", "<input type='color'>");
         colorInput.addClassName("color-picker-input");
 
         hexField.setPlaceholder("#3B82F6");
         hexField.setMaxLength(7);
-        hexField.setWidth("120px");
         hexField.setClearButtonVisible(true);
 
         colorInput.getElement().addEventListener("input", e -> {
@@ -48,10 +47,6 @@ public class ColorPickerField extends Div {
 
         add(labelComponent, row);
         addClassName("color-picker");
-    }
-
-    public String getValue() {
-        return value;
     }
 
     public void setValue(String color) {

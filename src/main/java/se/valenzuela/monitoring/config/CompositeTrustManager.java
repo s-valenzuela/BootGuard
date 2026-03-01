@@ -18,7 +18,7 @@ class CompositeTrustManager implements X509TrustManager {
 
     @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-        CertificateException last = null;
+        CertificateException last = new CertificateException("No trust managers configured");
         for (X509TrustManager tm : delegates) {
             try {
                 tm.checkClientTrusted(chain, authType);
@@ -32,7 +32,7 @@ class CompositeTrustManager implements X509TrustManager {
 
     @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-        CertificateException last = null;
+        CertificateException last = new CertificateException("No trust managers configured");
         for (X509TrustManager tm : delegates) {
             try {
                 tm.checkServerTrusted(chain, authType);

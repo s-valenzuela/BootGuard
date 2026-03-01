@@ -48,14 +48,6 @@ public class ServicesView extends VerticalLayout {
 
         cardGrid.addClassName("service-card-grid");
         cardGrid.setWidthFull();
-        cardGrid.getStyle()
-                .set("display", "grid")
-                .set("grid-template-columns", "repeat(auto-fill, minmax(300px, 1fr))")
-                .set("gap", "var(--lumo-space-m)")
-                .set("padding", "var(--lumo-space-m)")
-                .set("align-content", "start")
-                .set("overflow-y", "auto")
-                .set("box-sizing", "border-box");
 
         add(summaryBar);
         addAndExpand(cardGrid);
@@ -115,16 +107,15 @@ public class ServicesView extends VerticalLayout {
         long down    = services.stream().filter(s -> !s.isHealthStatus()).count();
         long warning = services.stream().filter(s -> s.isHealthStatus() && s.isCertExpiringSoon()).count();
         summaryBar.add(
-                summaryChip("var(--lumo-success-color)", healthy + " Healthy"),
-                summaryChip("var(--lumo-error-color)",   down    + " Down"),
-                summaryChip("goldenrod",                  warning + " Warning")
+                summaryChip("healthy", healthy + " Healthy"),
+                summaryChip("down",    down    + " Down"),
+                summaryChip("warning", warning + " Warning")
         );
     }
 
-    private Span summaryChip(String color, String text) {
+    private Span summaryChip(String variant, String text) {
         var dot = VaadinIcon.CIRCLE.create();
-        dot.setSize("12px");
-        dot.setColor(color);
+        dot.addClassNames("summary-chip-dot", "summary-chip-dot--" + variant);
         var chip = new Span(dot, new Span(text));
         chip.addClassName("summary-chip");
         return chip;

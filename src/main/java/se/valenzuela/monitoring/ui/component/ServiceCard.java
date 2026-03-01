@@ -34,7 +34,7 @@ public class ServiceCard extends Div {
         body.addClassName("service-card-body");
         body.addClickListener(_ -> onDetail.run());
 
-        var dot = ServiceViewUtils.statusIcon(service.isHealthStatus(), service.isCertExpiringSoon(), "16px");
+        var dot = ServiceViewUtils.statusIcon(service.isHealthStatus(), service.isCertExpiringSoon());
         var name = new Span(service.getName() != null ? service.getName() : service.getUrl());
         name.addClassName("service-card-name");
         var version = new Span(service.getVersion() != null ? service.getVersion() : "");

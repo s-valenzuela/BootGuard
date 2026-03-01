@@ -162,6 +162,32 @@ vaadin-app-layout::part(navbar) {
     gap: var(--lumo-space-s);
 }
 
+.status-dot {
+    --vaadin-icon-size: 1rem; /* 16px — default (card header) */
+}
+
+.status-dot--healthy { color: var(--lumo-success-color); }
+.status-dot--warning { color: goldenrod; }
+.status-dot--down    { color: var(--lumo-error-color); }
+
+.detail-status-row .status-dot {
+    --vaadin-icon-size: 1.125rem; /* 18px — detail dialog hero */
+}
+
+vaadin-grid .status-dot {
+    --vaadin-icon-size: 1.375rem; /* 22px — services grid */
+}
+
+.info-status-span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.info-status-span .status-dot {
+    --vaadin-icon-size: 0.875rem; /* 14px */
+}
+
 .service-card-name {
     font-weight: 600;
     font-size: var(--lumo-font-size-m);
@@ -244,6 +270,14 @@ vaadin-app-layout::part(navbar) {
     font-weight: 500;
 }
 
+.summary-chip-dot {
+    --vaadin-icon-size: 0.75rem; /* 12px */
+}
+
+.summary-chip-dot--healthy { color: var(--lumo-success-color); }
+.summary-chip-dot--down    { color: var(--lumo-error-color); }
+.summary-chip-dot--warning { color: goldenrod; }
+
 /* ── Detail dialog ─────────────────────────────────────────────────────── */
 
 .detail-grid {
@@ -264,6 +298,21 @@ vaadin-app-layout::part(navbar) {
     font-weight: 500;
     color: var(--lumo-secondary-text-color);
     font-size: var(--lumo-font-size-s);
+}
+
+.health-label { font-weight: 600; }
+.health-label--healthy { color: var(--lumo-success-color); }
+.health-label--warning { color: goldenrod; }
+.health-label--down    { color: var(--lumo-error-color); }
+
+.detail-url-link {
+    font-size: var(--lumo-font-size-s);
+    color: var(--lumo-primary-color);
+}
+
+.cert-expiry--warning {
+    color: goldenrod;
+    font-weight: 600;
 }
 
 .detail-env-row {
@@ -302,8 +351,13 @@ vaadin-app-layout::part(navbar) {
 .channel-card {
     background-color: var(--lumo-contrast-5pct);
     border-radius: var(--lumo-border-radius-l);
-    padding: var(--lumo-space-m);
-    gap: var(--lumo-space-xs);
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+}
+
+.channel-card--narrow {
+    max-width: 480px;
 }
 
 .channel-card-title {
@@ -311,8 +365,19 @@ vaadin-app-layout::part(navbar) {
     font-size: var(--lumo-font-size-l);
 }
 
+.channel-card-header {
+    padding: var(--lumo-space-m);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.channel-card-checkbox {
+    padding: var(--lumo-space-xs) var(--lumo-space-m);
+}
+
 .channel-card-form {
     gap: var(--lumo-space-xs);
+    padding: var(--lumo-space-xs) var(--lumo-space-m);
 }
 
 /* ── Notification page ───────────────────────────────────────────────────── */
@@ -365,6 +430,7 @@ vaadin-app-layout::part(navbar) {
 .channel-card-footer {
     border-top: 1px solid var(--lumo-contrast-5pct);
     margin-top: var(--lumo-space-xs);
+    padding: var(--lumo-space-xs) var(--lumo-space-m);
 }
 
 /* Override grid badges */
@@ -430,6 +496,19 @@ vaadin-app-layout::part(navbar) {
     display: inline-block;
 }
 
+.color-picker-input input[type='color'] {
+    width: 40px;
+    height: 40px;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+}
+
+.color-picker-row vaadin-text-field {
+    width: 120px;
+}
+
 /* Email list field */
 
 .chip-container {
@@ -447,6 +526,31 @@ vaadin-app-layout::part(navbar) {
 .email-chip-remove {
     min-width: 0;
 }
+
+/* Loggers dialog (ServiceLoggersDialog) */
+
+.logger-hint {
+    font-size: var(--lumo-font-size-xs);
+    color: var(--lumo-secondary-text-color);
+}
+
+/* Logger level badge (ServiceLoggersDialog) */
+
+.level-badge {
+    font-size: var(--lumo-font-size-xs);
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: var(--lumo-border-radius-s);
+    color: white;
+    background: var(--lumo-contrast-40pct); /* default / unknown */
+}
+
+.level-badge--trace { background: #6b7280; }
+.level-badge--debug { background: #3b82f6; }
+.level-badge--info  { background: #22c55e; }
+.level-badge--warn  { background: #f59e0b; }
+.level-badge--error { background: #ef4444; }
+.level-badge--off   { background: #1f2937; }
 
 /* Color swatch (EnvironmentsView) */
 

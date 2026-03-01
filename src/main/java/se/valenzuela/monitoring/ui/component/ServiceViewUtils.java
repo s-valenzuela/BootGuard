@@ -10,16 +10,14 @@ import java.time.Instant;
 
 public final class ServiceViewUtils {
 
-    public static final String COLOR_ERROR   = "var(--lumo-error-color)";
-    public static final String COLOR_WARNING = "goldenrod";
-    public static final String COLOR_SUCCESS = "var(--lumo-success-color)";
-
     private ServiceViewUtils() {}
 
-    public static Icon statusIcon(boolean healthy, boolean warning, String size) {
+    public static Icon statusIcon(boolean healthy, boolean warning) {
         var icon = VaadinIcon.CIRCLE.create();
-        icon.setSize(size);
-        icon.setColor(!healthy ? COLOR_ERROR : warning ? COLOR_WARNING : COLOR_SUCCESS);
+        icon.addClassName("status-dot");
+        if (!healthy)     icon.addClassName("status-dot--down");
+        else if (warning) icon.addClassName("status-dot--warning");
+        else              icon.addClassName("status-dot--healthy");
         return icon;
     }
 
