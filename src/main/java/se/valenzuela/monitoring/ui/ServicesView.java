@@ -207,9 +207,7 @@ public class ServicesView extends VerticalLayout {
             if (service.isCertExpiringSoon()) certSpan.addClassName("service-card-cert--warning");
             footer.add(certSpan);
         }
-        var timeSpan = new Span("Checked " + relativeTime(service.getLastUpdated()));
-        timeSpan.addClassName("service-card-time");
-        footer.add(timeSpan);
+        footer.add(buildLiveCheckedSpan(service.getLastUpdated()));
 
         body.add(header, urlLink, badgesRow, footer);
         return body;
@@ -467,6 +465,38 @@ public class ServicesView extends VerticalLayout {
         var label = new Span(text);
         label.addClassName("detail-label");
         return label;
+    }
+
+    private static Span buildLiveCheckedSpan(Instant lastUpdated) {
+        var span = new Span();
+        span.addClassName("service-card-time");
+
+        if (lastUpdated == null) {
+            span.setText("Never checked");
+            return span;
+        }
+
+        span.getElement().setAttribute("data-checked-at", String.valueOf(lastUpdated.toEpochMilli()));
+        span.setText("Checked " + relativeTime(lastUpdated)); // shown before JS runs
+
+        span.getElement().executeJs("""
+            (function(el) {
+                if (el._tick) clearInterval(el._tick);
+                function fmt(ms) {
+                    var s = Math.floor((Date.now() - ms) / 1000);
+                    if (s < 60)   return s + 's ago';
+                    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+                    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+                    return Math.floor(s / 86400) + 'd ago';
+                }
+                var t = parseInt(el.getAttribute('data-checked-at'));
+                el._tick = setInterval(function() {
+                    el.textContent = 'Checked ' + fmt(t);
+                }, 1000);
+            })(this);
+            """);
+
+        return span;
     }
 
     private static String relativeTime(Instant instant) {
