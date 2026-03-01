@@ -13,7 +13,7 @@ import se.valenzuela.monitoring.core.service.EnvironmentService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.AddMonitoredServiceComponent;
 
-@Route
+@Route("services")
 @Menu(order = -100, icon = "vaadin:home", title = "Services")
 @UIScope
 public class ServicesPage extends Main {
