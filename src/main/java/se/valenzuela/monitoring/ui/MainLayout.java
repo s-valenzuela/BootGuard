@@ -40,7 +40,7 @@ public final class MainLayout extends AppLayout implements BeforeEnterObserver {
         brand.addClassName("navbar-brand");
 
         // Nav links
-        servicesLink = new RouterLink("Services", MainView.class);
+        servicesLink = new RouterLink("Services", ServicesPage.class);
         servicesLink.addClassName("navbar-link");
 
         environmentsLink = new RouterLink("Environments", EnvironmentsView.class);
@@ -78,7 +78,7 @@ public final class MainLayout extends AppLayout implements BeforeEnterObserver {
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
         Class<?> target = event.getNavigationTarget();
-        setActiveLink(servicesLink, target == MainView.class);
+        setActiveLink(servicesLink, target == ServicesPage.class);
         setActiveLink(environmentsLink, target == EnvironmentsView.class);
         setActiveLink(notificationsLink, target == NotificationSettingsView.class);
         setActiveLink(settingsLink, target == SettingsView.class);

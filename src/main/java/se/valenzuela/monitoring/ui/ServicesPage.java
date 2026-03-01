@@ -13,15 +13,12 @@ import se.valenzuela.monitoring.core.service.EnvironmentService;
 import se.valenzuela.monitoring.core.service.MonitoringService;
 import se.valenzuela.monitoring.ui.component.AddMonitoredServiceComponent;
 
-/**
- * This view shows up when a user navigates to the root ('/') of the application.
- */
 @Route
 @Menu(order = -100, icon = "vaadin:home", title = "Services")
 @UIScope
-public class MainView extends Main {
+public class ServicesPage extends Main {
 
-    public MainView(MonitoringService monitoringService, EnvironmentService environmentService) {
+    public ServicesPage(MonitoringService monitoringService, EnvironmentService environmentService) {
         addClassNames("view-content", LumoUtility.Display.FLEX, LumoUtility.FlexDirection.COLUMN,
                 LumoUtility.BoxSizing.BORDER);
         setSizeFull();
