@@ -43,6 +43,9 @@ public class HealthCheckScheduler {
 
         if (!dueServices.isEmpty()) {
             monitoringService.fetchHealthStatuses(dueServices);
+            // Always refresh the UI after polling so cert expiry, last-checked
+            // time, and other transient fields update without a page reload.
+            monitoringService.notifyListeners(dueServices.get(0));
         }
 
         Set<Long> currentServiceIds = allServices.stream()
@@ -68,7 +71,6 @@ public class HealthCheckScheduler {
                 var event = new ServiceHealthChangedEvent(
                         service, previouslyHealthy, currentlyHealthy, Instant.now());
                 eventPublisher.publishEvent(new MonitoringEventCarrier(this, event));
-                monitoringService.notifyListeners(service);
             }
         }
 
