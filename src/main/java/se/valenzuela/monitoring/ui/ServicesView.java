@@ -6,6 +6,8 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.checkbox.CheckboxGroup;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Hr;
@@ -16,8 +18,11 @@ import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.provider.ListDataProvider;
+import se.valenzuela.monitoring.core.client.LoggersResponse;
 import se.valenzuela.monitoring.core.model.Environment;
 import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.core.service.EnvironmentService;
@@ -31,11 +36,16 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
 public class ServicesView extends VerticalLayout {
+
+    private record LoggerRow(String name, String effectiveLevel, String configuredLevel) {}
+
+    private static final List<String> LOG_LEVELS = List.of("TRACE", "DEBUG", "INFO", "WARN", "ERROR", "OFF");
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
@@ -218,11 +228,15 @@ public class ServicesView extends VerticalLayout {
         editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         editBtn.setTooltipText("Edit");
 
+        var loggersBtn = new Button(VaadinIcon.LIST.create(), _ -> openLoggersDialog(service));
+        loggersBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        loggersBtn.setTooltipText("Loggers");
+
         var deleteBtn = new Button(VaadinIcon.TRASH.create(), _ -> openDeleteDialog(service, null));
         deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
         deleteBtn.setTooltipText("Delete");
 
-        var actions = new HorizontalLayout(editBtn, deleteBtn);
+        var actions = new HorizontalLayout(editBtn, loggersBtn, deleteBtn);
         actions.addClassName("service-card-actions");
         actions.setSpacing(false);
         return actions;
@@ -403,6 +417,150 @@ public class ServicesView extends VerticalLayout {
         dialog.add(content);
         dialog.getFooter().add(new Button("Cancel", _ -> dialog.close()), saveBtn);
         dialog.open();
+    }
+
+    // ── loggers dialog ────────────────────────────────────────────────────────
+
+    private void openLoggersDialog(MonitoredService service) {
+        var dialog = new Dialog();
+        dialog.setWidth("680px");
+        dialog.setHeight("70vh");
+        String name = service.getName() != null ? service.getName() : service.getUrl();
+        dialog.setHeaderTitle("Loggers \u2014 " + name);
+
+        LoggersResponse response;
+        try {
+            response = monitoringService.fetchLoggers(service);
+        } catch (Exception e) {
+            var msg = new VerticalLayout(
+                    new Span("Could not reach /actuator/loggers on this service."),
+                    new Span("Make sure the loggers endpoint is exposed in the service\u2019s actuator config."));
+            msg.setPadding(false);
+            dialog.add(msg);
+            dialog.getFooter().add(new Button("Close", _ -> dialog.close()));
+            dialog.open();
+            return;
+        }
+
+        if (response == null || response.loggers() == null) {
+            dialog.add(new Span("No logger data returned."));
+            dialog.getFooter().add(new Button("Close", _ -> dialog.close()));
+            dialog.open();
+            return;
+        }
+
+        List<LoggerRow> allRows = response.loggers().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> new LoggerRow(e.getKey(),
+                        e.getValue().effectiveLevel(),
+                        e.getValue().configuredLevel()))
+                .toList();
+
+        var dataProvider = new ListDataProvider<>(new ArrayList<>(allRows));
+
+        // filter: default shows only explicitly configured loggers
+        dataProvider.setFilter(r -> r.configuredLevel() != null);
+
+        var filterField = new TextField();
+        filterField.setPlaceholder("Search loggers\u2026");
+        filterField.setPrefixComponent(VaadinIcon.SEARCH.create());
+        filterField.setClearButtonVisible(true);
+        filterField.setWidthFull();
+        filterField.addValueChangeListener(e -> {
+            String text = e.getValue().trim().toLowerCase();
+            if (text.isEmpty()) {
+                dataProvider.setFilter(r -> r.configuredLevel() != null);
+            } else {
+                dataProvider.setFilter(r -> r.name().toLowerCase().contains(text));
+            }
+        });
+
+        var hint = new Span("Showing loggers with an explicit level. Search to find any logger.");
+        hint.getStyle()
+                .set("font-size", "var(--lumo-font-size-xs)")
+                .set("color", "var(--lumo-secondary-text-color)");
+
+        var grid = new Grid<LoggerRow>();
+        grid.setDataProvider(dataProvider);
+        grid.setSizeFull();
+        grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_NO_BORDER);
+
+        grid.addColumn(LoggerRow::name)
+                .setHeader("Logger")
+                .setFlexGrow(1)
+                .setSortable(true);
+
+        grid.addComponentColumn(row -> levelBadge(row.effectiveLevel()))
+                .setHeader("Effective")
+                .setWidth("105px")
+                .setFlexGrow(0);
+
+        grid.addComponentColumn(row -> {
+            var select = new Select<String>();
+            var items = new ArrayList<String>();
+            items.add("Inherit");
+            items.addAll(LOG_LEVELS);
+            select.setItems(items);
+            select.setValue(row.configuredLevel() != null ? row.configuredLevel() : "Inherit");
+            select.setWidth("110px");
+
+            var applyBtn = new Button("Apply");
+            applyBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+            applyBtn.addClickListener(_ -> {
+                String selected = select.getValue();
+                String level = "Inherit".equals(selected) ? null : selected;
+                try {
+                    monitoringService.setLoggerLevel(service, row.name(), level);
+                    Notification.show("Level updated", 2000, Notification.Position.BOTTOM_START)
+                            .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+                } catch (Exception ex) {
+                    Notification.show("Failed to set level: " + ex.getMessage(),
+                            3000, Notification.Position.BOTTOM_START)
+                            .addThemeVariants(NotificationVariant.LUMO_ERROR);
+                }
+            });
+
+            var cell = new HorizontalLayout(select, applyBtn);
+            cell.setAlignItems(HorizontalLayout.Alignment.CENTER);
+            cell.setSpacing(true);
+            cell.setPadding(false);
+            return cell;
+        }).setHeader("Set level").setWidth("220px").setFlexGrow(0);
+
+        var content = new VerticalLayout(filterField, hint, grid);
+        content.setSizeFull();
+        content.setPadding(false);
+        content.setSpacing(true);
+        content.setFlexGrow(1, grid);
+
+        dialog.add(content);
+        dialog.getFooter().add(new Button("Close", _ -> dialog.close()));
+        dialog.open();
+    }
+
+    private static Span levelBadge(String level) {
+        var badge = new Span(level != null ? level : "—");
+        badge.getStyle()
+                .set("font-size", "var(--lumo-font-size-xs)")
+                .set("font-weight", "600")
+                .set("padding", "1px 6px")
+                .set("border-radius", "var(--lumo-border-radius-s)")
+                .set("background", levelBadgeColor(level))
+                .set("color", "white");
+        return badge;
+    }
+
+    private static String levelBadgeColor(String level) {
+        if (level == null) return "var(--lumo-contrast-40pct)";
+        return switch (level) {
+            case "TRACE" -> "#6b7280";
+            case "DEBUG" -> "#3b82f6";
+            case "INFO"  -> "#22c55e";
+            case "WARN"  -> "#f59e0b";
+            case "ERROR" -> "#ef4444";
+            case "OFF"   -> "#1f2937";
+            default      -> "var(--lumo-contrast-40pct)";
+        };
     }
 
     // ── delete dialog ─────────────────────────────────────────────────────────

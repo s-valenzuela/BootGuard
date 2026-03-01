@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import se.valenzuela.monitoring.core.client.HealthEndpointResponse;
 import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
+import se.valenzuela.monitoring.core.client.LoggersResponse;
 import se.valenzuela.monitoring.core.model.MonitoredService;
 import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
@@ -14,6 +15,7 @@ import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
 import se.valenzuela.monitoring.settings.service.AppSettingService;
 import tools.jackson.databind.JsonNode;
 
+import org.springframework.http.MediaType;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -146,6 +148,25 @@ public class MonitoringService {
             service.setHealthResponseStatus("DOWN");
         }
         service.setLastUpdated(Instant.now());
+    }
+
+    public LoggersResponse fetchLoggers(MonitoredService service) {
+        return restClient.get()
+                .uri(service.getUrl() + "/actuator/loggers")
+                .retrieve()
+                .body(LoggersResponse.class);
+    }
+
+    public void setLoggerLevel(MonitoredService service, String loggerName, String level) {
+        String body = level != null
+                ? "{\"configuredLevel\":\"" + level + "\"}"
+                : "{\"configuredLevel\":null}";
+        restClient.post()
+                .uri(service.getUrl() + "/actuator/loggers/{name}", loggerName)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .toBodilessEntity();
     }
 
     public void notifyListeners(MonitoredService service) {
