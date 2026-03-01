@@ -46,7 +46,7 @@ public class ServicesView extends VerticalLayout {
     private final EnvironmentService environmentService;
 
     private Set<Environment> environmentFilter = Set.of();
-    private List<MonitoredService> currentServices = new ArrayList<>();
+    private List<MonitoredService> currentServices;
 
     private final HorizontalLayout summaryBar = new HorizontalLayout();
     private final Div cardGrid = new Div();
@@ -104,7 +104,19 @@ public class ServicesView extends VerticalLayout {
     private void renderAll(List<MonitoredService> all) {
         List<MonitoredService> visible = applyFilter(all);
         renderSummaryBar(visible);
-        renderCards(visible);
+        renderCards(sortByStatus(visible));
+    }
+
+    private List<MonitoredService> sortByStatus(List<MonitoredService> services) {
+        return services.stream()
+                .sorted(Comparator.comparingInt(ServicesView::statusPriority))
+                .toList();
+    }
+
+    private static int statusPriority(MonitoredService s) {
+        if (!s.isHealthStatus()) return 0;      // DOWN first
+        if (s.isCertExpiringSoon()) return 1;   // WARNING second
+        return 2;                               // HEALTHY last
     }
 
     private List<MonitoredService> applyFilter(List<MonitoredService> services) {
