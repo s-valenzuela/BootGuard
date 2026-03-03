@@ -26,15 +26,35 @@ public record VaultProperties(
         return uri != null && !uri.isBlank() && token != null && !token.isBlank();
     }
 
-    /** Vault KV v2 data path for a given service. */
-    String dataPath(Long serviceId) {
-        String mount = secretMountPath != null ? secretMountPath : "secret";
-        return "/v1/%s/data/bootguard/services/%d".formatted(mount, serviceId);
+    /** Vault KV v2 data path for a service. */
+    String serviceDataPath(Long serviceId) {
+        return dataPath("services", serviceId);
     }
 
-    /** Vault KV v2 metadata path — used for hard-deletes. */
-    String metadataPath(Long serviceId) {
-        String mount = secretMountPath != null ? secretMountPath : "secret";
-        return "/v1/%s/metadata/bootguard/services/%d".formatted(mount, serviceId);
+    /** Vault KV v2 data path for an environment. */
+    String environmentDataPath(Long environmentId) {
+        return dataPath("environments", environmentId);
+    }
+
+    /** Vault KV v2 metadata path for a service — used for hard-deletes. */
+    String serviceMetadataPath(Long serviceId) {
+        return metadataPath("services", serviceId);
+    }
+
+    /** Vault KV v2 metadata path for an environment — used for hard-deletes. */
+    String environmentMetadataPath(Long environmentId) {
+        return metadataPath("environments", environmentId);
+    }
+
+    private String dataPath(String entityType, Long id) {
+        return "/v1/%s/data/bootguard/%s/%d".formatted(mount(), entityType, id);
+    }
+
+    private String metadataPath(String entityType, Long id) {
+        return "/v1/%s/metadata/bootguard/%s/%d".formatted(mount(), entityType, id);
+    }
+
+    private String mount() {
+        return secretMountPath != null ? secretMountPath : "secret";
     }
 }

@@ -3,6 +3,7 @@ package se.valenzuela.monitoring.core.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import se.valenzuela.monitoring.core.auth.AuthType;
 
 import java.util.Objects;
 
@@ -27,6 +28,24 @@ public class Environment {
 
     @Column(name = "health_check_interval_seconds")
     private Integer healthCheckIntervalSeconds;
+
+    /**
+     * Default auth type applied to services in this environment that have no
+     * service-level auth configured. Resolved using the environment with the
+     * lowest {@code displayOrder} when a service belongs to multiple environments.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "default_auth_type", nullable = false, length = 30)
+    private AuthType defaultAuthType = AuthType.NONE;
+
+    /**
+     * JSON-encoded non-sensitive config for the default auth type.
+     * Same structure as {@code ServiceAuthConfig.configJson}.
+     * Sensitive credentials are stored in Vault under
+     * {@code secret/bootguard/environments/{id}}.
+     */
+    @Column(name = "default_auth_config_json", columnDefinition = "TEXT")
+    private String defaultAuthConfigJson;
 
     protected Environment() {
     }

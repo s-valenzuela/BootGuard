@@ -12,19 +12,18 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Reads and writes service credentials in HashiCorp Vault using the KV v2 API.
+ * Reads and writes credentials in HashiCorp Vault using the KV v2 API.
  *
- * <p>Secrets are stored at:
- * <pre>  {mount}/data/bootguard/services/{serviceId}</pre>
- *
- * <p>The RestClient used here is intentionally separate from the shared monitoring
- * RestClient: it does not carry client certificates and connects to Vault over plain
- * HTTP (or HTTPS, if VAULT_URI points to an HTTPS endpoint).
+ * <p>Secrets are stored under two namespaces:
+ * <pre>
+ *   {mount}/data/bootguard/services/{serviceId}
+ *   {mount}/data/bootguard/environments/{environmentId}
+ * </pre>
  *
  * <p>If Vault is not configured ({@link VaultProperties#isConfigured()} returns
  * {@code false}), all reads return {@link Optional#empty()} and writes are silently
- * skipped. This allows BootGuard to start without Vault when no service uses
- * credential-based auth.
+ * skipped. This allows BootGuard to start without Vault when no service or
+ * environment uses credential-based auth.
  */
 @Slf4j
 @Service
@@ -43,25 +42,55 @@ public class VaultSecretStore {
                     .build();
         } else {
             this.vaultClient = null;
-            log.info("Vault not configured — service credential storage is disabled");
+            log.info("Vault not configured — credential storage is disabled");
         }
     }
 
-    /**
-     * Reads the secrets for the given service from Vault.
-     * Returns {@link Optional#empty()} when Vault is not configured or the path
-     * does not yet contain a secret.
-     */
-    public Optional<ServiceSecrets> readSecrets(Long serviceId) {
+    // ── Service secrets ──────────────────────────────────────────────────────
+
+    /** Reads secrets for the given service. Returns empty when not configured or not found. */
+    public Optional<ServiceSecrets> readServiceSecrets(Long serviceId) {
+        return read(props.serviceDataPath(serviceId), "service " + serviceId);
+    }
+
+    /** Writes (or updates) secrets for the given service. Null fields are omitted. */
+    public void writeServiceSecrets(Long serviceId, ServiceSecrets secrets) {
+        write(props.serviceDataPath(serviceId), secrets, "service " + serviceId);
+    }
+
+    /** Permanently deletes all secret versions for the given service. */
+    public void deleteServiceSecrets(Long serviceId) {
+        delete(props.serviceMetadataPath(serviceId), "service " + serviceId);
+    }
+
+    // ── Environment secrets ──────────────────────────────────────────────────
+
+    /** Reads default-auth secrets for the given environment. Returns empty when not configured or not found. */
+    public Optional<ServiceSecrets> readEnvironmentSecrets(Long environmentId) {
+        return read(props.environmentDataPath(environmentId), "environment " + environmentId);
+    }
+
+    /** Writes (or updates) default-auth secrets for the given environment. Null fields are omitted. */
+    public void writeEnvironmentSecrets(Long environmentId, ServiceSecrets secrets) {
+        write(props.environmentDataPath(environmentId), secrets, "environment " + environmentId);
+    }
+
+    /** Permanently deletes all secret versions for the given environment. */
+    public void deleteEnvironmentSecrets(Long environmentId) {
+        delete(props.environmentMetadataPath(environmentId), "environment " + environmentId);
+    }
+
+    // ── Internal helpers ─────────────────────────────────────────────────────
+
+    private Optional<ServiceSecrets> read(String path, String label) {
         if (vaultClient == null) {
             return Optional.empty();
         }
         try {
             KvReadResponse response = vaultClient.get()
-                    .uri(props.dataPath(serviceId))
+                    .uri(path)
                     .retrieve()
                     .body(KvReadResponse.class);
-
             if (response == null || response.data() == null || response.data().data() == null) {
                 return Optional.empty();
             }
@@ -77,19 +106,14 @@ public class VaultSecretStore {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 return Optional.empty();
             }
-            log.warn("Failed to read secrets from Vault for service {}: {}", serviceId, e.getMessage());
+            log.warn("Failed to read secrets from Vault for {}: {}", label, e.getMessage());
             return Optional.empty();
         }
     }
 
-    /**
-     * Writes (or updates) the secrets for the given service in Vault.
-     * Null values in {@code secrets} are omitted from the payload — they do not
-     * overwrite previously stored values.
-     */
-    public void writeSecrets(Long serviceId, ServiceSecrets secrets) {
+    private void write(String path, ServiceSecrets secrets, String label) {
         if (vaultClient == null) {
-            log.warn("Vault not configured — secrets for service {} were not stored", serviceId);
+            log.warn("Vault not configured — secrets for {} were not stored", label);
             return;
         }
         Map<String, String> data = new HashMap<>();
@@ -98,37 +122,32 @@ public class VaultSecretStore {
         putIfPresent(data, "clientSecret", secrets.clientSecret());
         putIfPresent(data, "certificatePem", secrets.certificatePem());
         putIfPresent(data, "privateKeyPem", secrets.privateKeyPem());
-
         try {
             vaultClient.post()
-                    .uri(props.dataPath(serviceId))
+                    .uri(path)
                     .body(new KvWriteRequest(data))
                     .retrieve()
                     .toBodilessEntity();
-            log.debug("Wrote secrets to Vault for service {}", serviceId);
+            log.debug("Wrote secrets to Vault for {}", label);
         } catch (RestClientResponseException e) {
-            log.error("Failed to write secrets to Vault for service {}: {}", serviceId, e.getMessage());
+            log.error("Failed to write secrets to Vault for {}: {}", label, e.getMessage());
             throw new IllegalStateException("Could not persist credentials to Vault", e);
         }
     }
 
-    /**
-     * Permanently deletes all secret versions for the given service from Vault.
-     * Call this when a service is removed.
-     */
-    public void deleteSecrets(Long serviceId) {
+    private void delete(String path, String label) {
         if (vaultClient == null) {
             return;
         }
         try {
             vaultClient.delete()
-                    .uri(props.metadataPath(serviceId))
+                    .uri(path)
                     .retrieve()
                     .toBodilessEntity();
-            log.debug("Deleted secrets from Vault for service {}", serviceId);
+            log.debug("Deleted secrets from Vault for {}", label);
         } catch (RestClientResponseException e) {
             if (e.getStatusCode() != HttpStatus.NOT_FOUND) {
-                log.warn("Failed to delete secrets from Vault for service {}: {}", serviceId, e.getMessage());
+                log.warn("Failed to delete secrets from Vault for {}: {}", label, e.getMessage());
             }
         }
     }
