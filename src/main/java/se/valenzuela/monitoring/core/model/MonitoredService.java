@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import se.valenzuela.monitoring.core.client.InfoEndpointResponse;
 
+import org.springframework.lang.Nullable;
+
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Objects;
@@ -59,6 +61,11 @@ public class MonitoredService {
             joinColumns = @JoinColumn(name = "service_id"),
             inverseJoinColumns = @JoinColumn(name = "environment_id"))
     private Set<Environment> environments = new HashSet<>();
+
+    @Nullable
+    @OneToOne(mappedBy = "service", fetch = FetchType.EAGER,
+              cascade = CascadeType.ALL, orphanRemoval = true)
+    private ServiceAuthConfig authConfig;
 
     protected MonitoredService() {
     }

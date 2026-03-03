@@ -12,6 +12,8 @@ import se.valenzuela.monitoring.core.repository.MonitoredServiceRepository;
 import se.valenzuela.monitoring.notification.event.MonitoringEventCarrier;
 import se.valenzuela.monitoring.notification.event.ServiceAddedEvent;
 import se.valenzuela.monitoring.notification.event.ServiceRemovedEvent;
+import se.valenzuela.monitoring.core.auth.ServiceAuthProvider;
+import se.valenzuela.monitoring.core.auth.ServiceAuthProviderFactory;
 import se.valenzuela.monitoring.settings.service.AppSettingService;
 import tools.jackson.databind.JsonNode;
 
@@ -33,14 +35,17 @@ public class MonitoringService {
     private final MonitoredServiceRepository repository;
     private final ApplicationEventPublisher eventPublisher;
     private final AppSettingService appSettingService;
+    private final ServiceAuthProviderFactory authProviderFactory;
     private final CopyOnWriteArrayList<Consumer<MonitoredService>> listeners = new CopyOnWriteArrayList<>();
 
     public MonitoringService(RestClient restClient, MonitoredServiceRepository repository,
-                             ApplicationEventPublisher eventPublisher, AppSettingService appSettingService) {
+                             ApplicationEventPublisher eventPublisher, AppSettingService appSettingService,
+                             ServiceAuthProviderFactory authProviderFactory) {
         this.restClient = restClient;
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.appSettingService = appSettingService;
+        this.authProviderFactory = authProviderFactory;
     }
 
     public boolean addService(String url) {
@@ -119,12 +124,13 @@ public class MonitoringService {
     }
 
     private void fetchStatus(MonitoredService service) {
+        ServiceAuthProvider auth = authProviderFactory.forService(service);
+        RestClient client = clientFor(auth);
         String baseUrl = service.getUrl();
         try {
-            InfoEndpointResponse info = restClient.get()
-                    .uri(baseUrl + service.getInfoEndpoint())
-                    .retrieve()
-                    .body(InfoEndpointResponse.class);
+            var spec = client.get().uri(baseUrl + service.getInfoEndpoint());
+            auth.applyHeaders(spec);
+            InfoEndpointResponse info = spec.retrieve().body(InfoEndpointResponse.class);
             service.setInfoStatus(true);
             if (info != null) {
                 service.setName(info.name());
@@ -134,10 +140,9 @@ public class MonitoringService {
             service.setInfoStatus(false);
         }
         try {
-            HealthEndpointResponse health = restClient.get()
-                    .uri(baseUrl + service.getHealthEndpoint())
-                    .retrieve()
-                    .body(HealthEndpointResponse.class);
+            var spec = client.get().uri(baseUrl + service.getHealthEndpoint());
+            auth.applyHeaders(spec);
+            HealthEndpointResponse health = spec.retrieve().body(HealthEndpointResponse.class);
             service.setHealthResponseStatus(health != null ? health.status() : null);
             service.setHealthStatus(health != null && "UP".equalsIgnoreCase(health.status()));
             if (health != null) {
@@ -151,22 +156,29 @@ public class MonitoringService {
     }
 
     public LoggersResponse fetchLoggers(MonitoredService service) {
-        return restClient.get()
-                .uri(service.getUrl() + "/actuator/loggers")
-                .retrieve()
-                .body(LoggersResponse.class);
+        ServiceAuthProvider auth = authProviderFactory.forService(service);
+        var spec = clientFor(auth).get().uri(service.getUrl() + "/actuator/loggers");
+        auth.applyHeaders(spec);
+        return spec.retrieve().body(LoggersResponse.class);
     }
 
     public void setLoggerLevel(MonitoredService service, String loggerName, String level) {
         String body = level != null
                 ? "{\"configuredLevel\":\"" + level + "\"}"
                 : "{\"configuredLevel\":null}";
-        restClient.post()
+        ServiceAuthProvider auth = authProviderFactory.forService(service);
+        var spec = clientFor(auth).post()
                 .uri(service.getUrl() + "/actuator/loggers/{name}", loggerName)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .toBodilessEntity();
+                .contentType(MediaType.APPLICATION_JSON);
+        auth.applyHeaders(spec);
+        spec.body(body).retrieve().toBodilessEntity();
+    }
+
+    /** Returns the shared RestClient, or a per-service one for mTLS. */
+    private RestClient clientFor(ServiceAuthProvider auth) {
+        return auth.requestFactory()
+                .map(factory -> RestClient.builder().requestFactory(factory).build())
+                .orElse(restClient);
     }
 
     public void notifyListeners(MonitoredService service) {

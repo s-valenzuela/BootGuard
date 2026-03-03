@@ -48,6 +48,10 @@ bootguard:
   health-check:
     interval: 30000
     initial-delay: 10000
+  vault:
+    uri: ${VAULT_URI:}
+    token: ${VAULT_TOKEN:}
+    secret-mount-path: ${VAULT_SECRET_MOUNT_PATH:secret}
 
 management:
   endpoints:

@@ -15,3 +15,7 @@ spring:
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:1025}
+bootguard:
+  vault:
+    uri: http://localhost:8200
+    token: dev-root-token
