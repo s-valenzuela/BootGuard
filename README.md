@@ -9,7 +9,7 @@ Built with **Spring Boot 4.0.2**, **Vaadin 25.0.5**, and **Java 25** with virtua
 - Registers Spring Boot services via a REST endpoint (`POST /register`) or through the UI
 - Polls each service's Actuator health endpoint on a configurable interval (default: 30 s, per-service overrides supported)
 - Detects `UP` → `DOWN` and `DOWN` → `UP` transitions and fires async notifications
-- Sends alerts via **email** (SMTP) and/or **Slack** (webhook)
+- Sends alerts via **email** (SMTP) and/or **Slack** (webhook) — both channels are optional
 - Exposes its own Actuator endpoints (`/actuator/health`, `/actuator/metrics`, `/actuator/prometheus`)
 - Serves a Vaadin UI over HTTPS on port 8443
 
@@ -21,7 +21,7 @@ Built with **Spring Boot 4.0.2**, **Vaadin 25.0.5**, and **Java 25** with virtua
 | UI | Vaadin 25.0.5 |
 | Persistence | Spring Data JPA + Flyway + MariaDB 11 |
 | HTTP client | Apache HttpClient 5 via `RestClient` |
-| Notifications | Spring Mail + Slack webhook |
+| Notifications | Spring Mail + Slack webhook (both optional) |
 | Observability | Micrometer + Prometheus |
 | Build | Maven Wrapper |
 | Runtime | Java 25 with virtual threads |
@@ -29,7 +29,7 @@ Built with **Spring Boot 4.0.2**, **Vaadin 25.0.5**, and **Java 25** with virtua
 ## Prerequisites
 
 - **Java 25** (`java -version` should report 25)
-- **Docker** — runs MariaDB and Mailpit
+- **Docker** — runs MariaDB and Mailpit (development only)
 - **OpenSSL** — generates the local TLS certificate
 
 ## Setup
@@ -69,7 +69,7 @@ docker compose up -d
 This starts:
 
 - **MariaDB 11** on port `3306` — database `bootguard`, user `bootguard` / password `bootguard`
-- **Mailpit** on port `1025` (SMTP) and `8025` (web UI) — catches outgoing email locally
+- **Mailpit** on port `1025` (SMTP) and `8025` (web UI) — catches outgoing email locally for development. Replace with a real SMTP host in production (see [Notifications](#notifications))
 
 ### 3. Build and run
 
@@ -112,6 +112,39 @@ The `POST /register` endpoint accepts:
 BootGuard will immediately discover the service via its `/actuator/info` endpoint and begin polling `/actuator/health`.
 
 Alternatively, services can be added manually from the **Services** view in the UI.
+
+## Notifications
+
+Both notification channels are optional — BootGuard functions as a monitoring dashboard without them.
+
+### Email
+
+Configure an SMTP host via environment variables or `application.yaml`. Mailpit (`localhost:1025`) is used in development to capture outgoing mail without a real mail server; replace it with your actual SMTP relay for production:
+
+```yaml
+spring:
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+```
+
+### Slack
+
+Configure a Slack incoming webhook URL through the **Settings** view in the UI or directly in `application.yaml`:
+
+```yaml
+bootguard:
+  notifications:
+    slack:
+      webhook-url: https://hooks.slack.com/services/…
+```
+
+Leave the webhook URL unset to disable Slack notifications entirely.
 
 ## Configuration reference
 
