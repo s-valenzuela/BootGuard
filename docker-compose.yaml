@@ -1,6 +1,6 @@
 services:
   mariadb:
-    image: mariadb:11
+    image: mariadb:12
     ports:
       - "3306:3306"
     environment:
