@@ -73,14 +73,17 @@ public class ServiceCard extends Div {
         var editBtn = new Button(VaadinIcon.EDIT.create(), _ -> onEdit.run());
         editBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         editBtn.setTooltipText("Edit");
+        editBtn.getElement().setAttribute("aria-label", "Edit");
 
         var loggersBtn = new Button(VaadinIcon.LIST.create(), _ -> onLoggers.run());
         loggersBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
         loggersBtn.setTooltipText("Loggers");
+        loggersBtn.getElement().setAttribute("aria-label", "Loggers");
 
         var deleteBtn = new Button(VaadinIcon.TRASH.create(), _ -> onDelete.run());
         deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL, ButtonVariant.LUMO_ERROR);
         deleteBtn.setTooltipText("Delete");
+        deleteBtn.getElement().setAttribute("aria-label", "Delete");
 
         var actions = new HorizontalLayout(editBtn, loggersBtn, deleteBtn);
         actions.addClassName("service-card-actions");

@@ -86,6 +86,18 @@ This starts:
 
 The UI is available at **https://localhost:8443**. Vaadin opens the browser automatically in development mode.
 
+### 4. UI tests (Cucumber + Playwright)
+
+End-to-end UI scenarios live under `src/test/resources/features` and `src/test/java/.../e2e`. They run the full app (random port, self-signed HTTPS) against a disposable MariaDB Testcontainer and drive it with a headless Playwright browser, so they're kept out of `./mvnw test` and only run under `verify`:
+
+```bash
+# One-time: download the Playwright browser binaries
+./mvnw -q exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps chromium" -Dexec.classpathScope=test
+
+# Requires Docker running locally
+./mvnw verify
+```
+
 ## Registering a Spring Boot service
 
 Any Spring Boot service with Actuator on the classpath can register itself with BootGuard at startup. Add this to your monitored service:
