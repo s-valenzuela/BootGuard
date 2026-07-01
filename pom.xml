@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.2</version>
+		<version>4.1.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>se.valenzuela</groupId>
@@ -28,7 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<vaadin.version>25.0.5</vaadin.version>
+		<vaadin.version>25.2.1</vaadin.version>
 	</properties>
 	<dependencies>
 		<dependency>
